@@ -86,6 +86,8 @@ func main() {
 		"fs.rename":    bind(fsRename),
 		"fs.delete":    bind(fsDelete),
 		"fs.stat":      bind(fsStat),
+		"fs.files":     bind(fsFiles),
+		"fs.grep":      bind(fsGrep),
 		"scm.repos":    bind(scmRepos),
 		"scm.changes":  bind(scmChanges),
 		"scm.versions": bind(scmVersions),
