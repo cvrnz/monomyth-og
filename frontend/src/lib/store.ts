@@ -25,10 +25,15 @@ export const defaultSettings: Settings = {
   recents: [],
 }
 
-export type FileTab = { id: string; kind: 'file'; path: string | null; dirty: boolean }
-export type TerminalTab = { id: string; kind: 'terminal'; cwd: string }
-export type ScmTab = { id: string; kind: 'scm' }
-export type WelcomeTab = { id: string; kind: 'welcome' }
+// Terminals split off beside a tab's content (Cmd+\ below, Cmd+Shift+\ to the right). Each
+// pane has its own id; the tab's own content is the pane with the tab's id.
+export type Splits = { dir: 'below' | 'right'; panes: string[] }
+
+type TabBase = { id: string; splits?: Splits; focus?: string }
+export type FileTab = TabBase & { kind: 'file'; path: string | null; dirty: boolean; line?: number; col?: number }
+export type TerminalTab = TabBase & { kind: 'terminal'; cwd: string }
+export type ScmTab = TabBase & { kind: 'scm' }
+export type WelcomeTab = TabBase & { kind: 'welcome' }
 export type Tab = FileTab | TerminalTab | ScmTab | WelcomeTab
 
 export type Connection =
@@ -37,8 +42,8 @@ export type Connection =
   | { state: 'connected'; hello: Hello; target: Target }
   | { state: 'lost'; hello: Hello; target: Target; error: string; reconnecting?: boolean }
 
-// What the status bar shows for a tab: the mode on the left, details on the right.
-export type TabStatus = { mode?: string; items: string[]; errors?: number; warnings?: number }
+// What the status bar shows for a pane: the mode on the left, details on the right.
+export type PaneStatus = { mode?: string; items: string[]; errors?: number; warnings?: number }
 
 export type State = {
   platform: string
@@ -48,9 +53,12 @@ export type State = {
   active: string | null
   explorer: boolean
   palette: null | { mode: 'commands' | 'themes'; text?: string }
-  status: Record<string, TabStatus>
+  search: null | { kind: 'files' | 'text'; text: string }
+  status: Record<string, PaneStatus>
   // Previewing a theme in the picker, without saving it.
   previewTheme: string | null
+  // Counts connections to the agent: shells opened under an earlier one are gone.
+  session: number
 }
 
 let state: State = {
@@ -61,8 +69,10 @@ let state: State = {
   active: null,
   explorer: false,
   palette: null,
+  search: null,
   status: {},
   previewTheme: null,
+  session: 0,
 }
 
 const listeners = new Set<() => void>()
@@ -87,16 +97,25 @@ export function useStore<T>(selector: (s: State) => T): T {
 }
 
 let nextId = 0
-export function newId(): string {
-  return `t${++nextId}`
+export function newId(prefix = 't'): string {
+  return `${prefix}${++nextId}`
 }
 
-export function setTabStatus(id: string, status: TabStatus) {
+export function setPaneStatus(id: string, status: PaneStatus) {
   set((s) => ({ status: { ...s.status, [id]: status } }))
 }
 
 export function updateTab(id: string, patch: Partial<Tab>) {
   set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? ({ ...t, ...patch } as Tab) : t)) }))
+}
+
+export function activeTab(): Tab | undefined {
+  return state.tabs.find((t) => t.id === state.active)
+}
+
+// The pane that has focus in a tab: a split terminal, or the tab's own content.
+export function focusedPane(tab: Tab): string {
+  return tab.focus && tab.splits?.panes.includes(tab.focus) ? tab.focus : tab.id
 }
 
 export const isMac = () => state.platform === 'darwin'
