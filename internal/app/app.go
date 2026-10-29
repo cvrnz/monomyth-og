@@ -1,6 +1,6 @@
 // Package app is what the window's JavaScript calls: settings, picking a container, and a
-// pipe to the agent running in it. The desktop app binds it with Wails; cmd/devserver serves
-// it over HTTP so the UI can be worked on in a browser.
+// pipe to the agent running in it. The desktop app registers it as a Wails service;
+// cmd/devserver serves it over HTTP so the UI can be worked on in a browser.
 package app
 
 import (
@@ -183,4 +183,9 @@ func (a *App) Quit() {
 	a.QuitFn()
 }
 
-func (a *App) Shutdown() { a.Disconnect() }
+// ServiceShutdown runs when the app quits (Wails calls it): it stops the agent, which hangs
+// up its shells.
+func (a *App) ServiceShutdown() error {
+	a.Disconnect()
+	return nil
+}

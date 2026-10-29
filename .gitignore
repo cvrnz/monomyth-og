@@ -5,3 +5,4 @@ frontend/dist
 frontend/bindings
 internal/remote/agentbin/agent-*
 .task
+*.syso
