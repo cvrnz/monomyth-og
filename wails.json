@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Editor",
+  "outputfilename": "editor",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm build",
+  "frontend:dev:watcher": "pnpm dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Carlos Hernandez - Contractor",
+    "email": "Carlos.Hernandez.Contractor@alsac.stjude.org"
+  }
+}
