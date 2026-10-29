@@ -22,6 +22,7 @@ export type Repo = {
   action: SyncAction | null
 }
 export type Version = { content: string; binary: boolean }
+export type Match = { path: string; line: number; col: number; text: string }
 
 export const agent = {
   hello: (root?: string) => call<Hello>('hello', { root }),
@@ -32,6 +33,8 @@ export const agent = {
   rename: (from: string, to: string) => call<void>('fs.rename', { from, to }),
   remove: (path: string) => call<void>('fs.delete', { path }),
   stat: (path: string) => call<{ exists: boolean; dir: boolean }>('fs.stat', { path }),
+  files: (root: string) => call<{ files: string[]; truncated: boolean }>('fs.files', { root }),
+  grep: (root: string, query: string) => call<{ matches: Match[]; truncated: boolean }>('fs.grep', { root, query }),
   repos: (roots: string[]) => call<Repo[]>('scm.repos', { roots }),
   changes: (repo: string) => call<Change[]>('scm.changes', { repo }),
   versions: (repo: string, change: Change) => call<{ old: Version; new: Version }>('scm.versions', { repo, change }),
