@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Editor
+Comment=Edits files in an OpenShift or Dev Spaces container
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/editor %u
+Terminal=false
+Type=Application
+Icon=editor
+Categories=Utility;
+StartupWMClass=editor
+
+ 
