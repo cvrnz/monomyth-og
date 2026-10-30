@@ -29,6 +29,12 @@ Everything in the original plan is built:
   generated bindings (the Taskfile still generates them; harmless).
 - `vite.config.ts` aliases `monaco-editor/esm/...` and `monaco-vim`: monaco-vim 0.4.4 imports
   Monaco paths that Monaco 0.57's exports no longer map, and its "browser" build is stale.
+- **Local editing**: the agent's code is `internal/agent` (cross-platform; terminals on
+  go-pty, which is creack/pty on Unix and ConPTY on Windows). `agent/main.go` is the linux
+  binary for containers. A `Target{local: true}` runs it in-process (`remote.InProcess`, over
+  io.Pipe); the connect screen has a "This computer" section with the system folder picker
+  (`App.PickFolder`). On macOS, Homebrew's bin folders are added to PATH for git and rg. On
+  Windows, git/rg run with no console window, and paths are `C:/...` on the wire.
 
 ## Verified (in a Linux container)
 
@@ -46,6 +52,8 @@ Everything in the original plan is built:
 
 - Run on macOS and Windows for real (WKWebView / WebView2 key handling, the clipboard through
   Wails, the menu, fonts), and against a real cluster and Dev Spaces workspace.
+- Local editing on Windows hasn't been run: ConPTY terminals, drive-letter paths, git and
+  search there are compiled and reviewed, not tested.
 - macOS builds need a Mac (or `wails3 task setup:docker`).
 - Splits use one direction per tab: splitting right and then below stacks all panes below.
 - Files changed on disk by something else aren't reloaded in open tabs.

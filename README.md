@@ -1,9 +1,9 @@
 # Editor
 
-A desktop editor for macOS and Windows that edits files inside an OpenShift / Dev Spaces
-container. It connects with your `oc` login: pick a project, pod and container, and the app
-uploads a small agent into the container (`oc exec`) that reads and writes files, runs shells
-and git. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
+A desktop editor for macOS and Windows, for files on your computer or inside an OpenShift /
+Dev Spaces container. For a container it uses your `oc` login: pick a project, pod and
+container, and the app uploads a small agent into it (`oc exec`) that reads and writes files,
+runs shells and git. For local files the same agent runs inside the app. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
 status bar, command palette, floating explorer, source control tab, centered content and
 themes.
 
@@ -11,11 +11,14 @@ Built with Wails v3, React, TypeScript, HeroUI, Monaco (with monaco-vim) and xte
 
 ## Using it
 
-1. Log in once in a terminal: `oc login ...` (the app uses that login).
-2. Open the app, pick the project, the workspace pod and the container, optionally a folder
-   (the default is the workspace's projects folder), and press **Connect**. Recent
-   connections are listed at the top; a Dev Spaces workspace is found again after it
-   restarts with a new pod name.
+- **This computer**: choose a folder (or type its path) and press **Open**. Terminals run
+  your login shell (PowerShell on Windows); source control uses the `git` you have installed.
+- **A container**: log in once in a terminal (`oc login ...`), then pick the project, the
+  workspace pod and the container, optionally a folder (the default is the workspace's
+  projects folder), and press **Connect**.
+
+Recent folders and containers are listed at the top; a Dev Spaces workspace is found again
+after it restarts with a new pod name.
 
 Shortcuts use Cmd on macOS and Ctrl on Windows:
 
@@ -81,22 +84,27 @@ build needs a Mac (or `wails3 task setup:docker` for cross-compiling).
 
 `wails3 dev` runs the app with hot reload.
 
-The UI can also be worked on in a plain browser, against an agent running on this machine
-instead of a cluster (no Wails or `oc` needed, but Linux only, since the agent is):
+The UI can also be worked on in a plain browser, without Wails:
 
 ```sh
-go build -o /tmp/editor-agent ./agent
-go run ./cmd/devserver -agent /tmp/editor-agent     # serves the app's methods on :34115
-cd frontend && pnpm dev                             # http://127.0.0.1:9245
+go run ./cmd/devserver          # serves the app's methods on :34115
+cd frontend && pnpm dev         # http://127.0.0.1:9245
 ```
+
+"This computer" works there as in the app (type the folder's path; there's no picker). To try
+the container path without a cluster, on Linux, run the agent binary as a pretend pod:
+`go build -o /tmp/editor-agent ./agent && go run ./cmd/devserver -agent /tmp/editor-agent`.
 
 Checks: `go vet ./agent ./internal/... ./cmd/...`, `cd frontend && pnpm build && pnpm lint`.
 
 ## Layout
 
-- `agent/` — runs in the container: newline-delimited JSON over stdin/stdout. Files (`fs.*`,
-  including `fs.files`/`fs.grep` search, using ripgrep when the container has it), shells
-  (`term.*`) and git (`scm.*`).
+- `internal/agent` — does the work where the files are: newline-delimited JSON requests and
+  events. Files (`fs.*`, including `fs.files`/`fs.grep` search, using ripgrep when it's
+  installed), shells (`term.*`, on a pty or Windows ConPTY via go-pty) and git (`scm.*`).
+  Paths go over the wire with forward slashes, also on Windows (`C:/Users/...`).
+- `agent/` — the agent binary for containers (linux), serving `internal/agent` over
+  stdin/stdout. On this computer the app runs `internal/agent` in-process instead.
 - `internal/proto` — the wire format. `internal/remote` — finding `oc`, listing projects and
   pods, uploading and starting the agent. `internal/app` — the service the window calls.
 - `main.go` — the Wails app and window. `cmd/devserver` — the same service over HTTP.
