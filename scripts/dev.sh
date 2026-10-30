@@ -101,6 +101,8 @@ else
   profile="${XDG_CONFIG_HOME:-$HOME/.config}/monomyth/window"
 fi
 echo "Monomyth is open in its window; close it (or Ctrl+C) to stop."
-# Its own profile, so the window is its own process and this waits until it's closed.
+# Its own profile, so the window is its own process and this waits until it's closed. No
+# extensions or sync there, so nothing else takes the app's keys (extensions an organization's
+# policy forces on still load).
 "$bin" --app="$url" --user-data-dir="$profile" --window-size=1400,900 \
-  --no-first-run --no-default-browser-check >/dev/null 2>&1
+  --no-first-run --no-default-browser-check --disable-extensions --disable-sync >/dev/null 2>&1

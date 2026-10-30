@@ -57,9 +57,11 @@ try {
         return
     }
     Write-Host 'Monomyth is open in its window; close it (or Ctrl+C) to stop.'
-    # Its own profile, so the window is its own process and this waits until it's closed.
+    # Its own profile, so the window is its own process and this waits until it's closed. No
+    # extensions or sync there, so nothing else takes the app's keys (extensions an organization's
+    # policy forces on still load).
     $window = Start-Process $bin -PassThru -ArgumentList "--app=$url", "--user-data-dir=$env:LOCALAPPDATA\monomyth\window",
-        '--window-size=1400,900', '--no-first-run', '--no-default-browser-check'
+        '--window-size=1400,900', '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-sync'
     Wait-Process -Id $window.Id
 } finally {
     # Also stops shells opened in the app's terminals.
