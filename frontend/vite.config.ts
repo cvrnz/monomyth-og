@@ -27,5 +27,7 @@ export default defineConfig({
     strictPort: true,
     // For working on the UI in a browser: server/ answers what the Wails runtime would.
     proxy: { '/api': { target: 'http://127.0.0.1:34115', changeOrigin: true } },
+    // Under WSL, changes to files on a Windows drive (/mnt/c/...) send no file events.
+    watch: process.env.WSL_DISTRO_NAME && modules.startsWith('/mnt/') ? { usePolling: true, interval: 300 } : undefined,
   },
 })
