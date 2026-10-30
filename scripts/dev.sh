@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Runs Monomyth with no exe of its own (Git Bash on Windows, macOS, Linux): the Node server
+# Runs Monomyth with no exe of its own (Git Bash on Windows, WSL, macOS, Linux): the Node server
 # (server/) on :34115, Vite on :9245, and an app window (Edge or Chrome with --app, on its own
-# profile). Closing the window or Ctrl+C stops everything.
+# profile; the Windows browser under WSL). Closing the window or Ctrl+C stops everything.
 #
 #   ./scripts/dev.sh             # in a window
 #   ./scripts/dev.sh --browser   # no window; open http://127.0.0.1:9245 yourself
@@ -47,6 +47,9 @@ if [ "${1:-}" = --browser ]; then
   exit
 fi
 
+wsl=
+grep -qi microsoft /proc/version 2>/dev/null && wsl=1
+
 browser() {
   local c
   if [ -n "${LOCALAPPDATA:-}" ] && command -v cygpath >/dev/null; then
@@ -56,6 +59,15 @@ browser() {
       "$pf/Microsoft/Edge/Application/msedge.exe" \
       "$pf/Google/Chrome/Application/chrome.exe" \
       "$(cygpath -u "$LOCALAPPDATA")/Google/Chrome/Application/chrome.exe"; do
+      [ -f "$c" ] && { echo "$c"; return; }
+    done
+  fi
+  # Under WSL, use the Windows browser so the app gets a regular Windows window instead of
+  # WSLg's frame; it reaches the servers here through WSL's localhost forwarding
+  if [ -n "$wsl" ]; then
+    for c in "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
+      "/mnt/c/Program Files/Microsoft/Edge/Application/msedge.exe" \
+      "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"; do
       [ -f "$c" ] && { echo "$c"; return; }
     done
   fi
@@ -83,6 +95,8 @@ if [ -z "$bin" ]; then
 fi
 if [ -n "${LOCALAPPDATA:-}" ] && command -v cygpath >/dev/null; then
   profile="$(cygpath -w "$LOCALAPPDATA")\\monomyth\\window"
+elif [ -n "$wsl" ]; then
+  profile="$(cmd.exe /d /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d '\r')\\monomyth\\window"
 else
   profile="${XDG_CONFIG_HOME:-$HOME/.config}/monomyth/window"
 fi
