@@ -32,6 +32,7 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | G | Git (source control); again to go back to the tab you were on |
 | E | File explorer; again to go back to the tab you were on |
 | T | Terminal in a new tab |
+| D | SQL (database) in a new tab |
 | \\ | Terminal split below |
 | Shift+\\ | Terminal split to the right |
 | H / L | Previous / next tab |
