@@ -1,6 +1,4 @@
-//go:build linux
-
-package main
+package agent
 
 import (
 	"bytes"
@@ -35,7 +33,7 @@ func hello(p struct {
 	if u, err := user.Current(); err == nil {
 		name = u.Username
 	}
-	root := p.Root
+	root := fromWire(p.Root)
 	if root == "" {
 		root = os.Getenv("PROJECTS_ROOT")
 	}
@@ -51,8 +49,13 @@ func hello(p struct {
 	if info, err := os.Stat(root); err != nil || !info.IsDir() {
 		return helloResult{}, fmt.Errorf("%s is not a folder in the container", root)
 	}
-	return helloResult{Hostname: host, User: name, Home: home, Root: filepath.Clean(root), Shell: loginShell()}, nil
+	return helloResult{Hostname: host, User: name, Home: toWire(home), Root: toWire(filepath.Clean(root)), Shell: toWire(loginShell())}, nil
 }
+
+// Paths from the app use forward slashes; on Windows they're converted to the OS's own.
+func fromWire(p string) string { return filepath.FromSlash(p) }
+
+func toWire(p string) string { return filepath.ToSlash(p) }
 
 func expandHome(p string) string {
 	if p == "~" || strings.HasPrefix(p, "~/") {
@@ -74,6 +77,7 @@ type entry struct {
 func fsList(p struct {
 	Path string `json:"path"`
 }) ([]entry, error) {
+	p.Path = fromWire(p.Path)
 	items, err := os.ReadDir(p.Path)
 	if err != nil {
 		return nil, err
@@ -114,6 +118,7 @@ func fsRead(p struct {
 	Path  string `json:"path"`
 	Limit int64  `json:"limit"`
 }) (readResult, error) {
+	p.Path = fromWire(p.Path)
 	info, err := os.Stat(p.Path)
 	if err != nil {
 		return readResult{}, err
@@ -149,7 +154,7 @@ func fsWrite(p struct {
 	Path    string `json:"path"`
 	Content string `json:"content"`
 }) (struct{}, error) {
-	target := p.Path
+	target := fromWire(p.Path)
 	if resolved, err := filepath.EvalSymlinks(target); err == nil {
 		target = resolved
 	}
@@ -185,6 +190,7 @@ func fsCreate(p struct {
 	Path string `json:"path"`
 	Dir  bool   `json:"dir"`
 }) (struct{}, error) {
+	p.Path = fromWire(p.Path)
 	if _, err := os.Lstat(p.Path); err == nil {
 		return struct{}{}, fmt.Errorf("%s already exists", filepath.Base(p.Path))
 	}
@@ -205,6 +211,7 @@ func fsRename(p struct {
 	From string `json:"from"`
 	To   string `json:"to"`
 }) (struct{}, error) {
+	p.From, p.To = fromWire(p.From), fromWire(p.To)
 	if _, err := os.Lstat(p.To); err == nil {
 		return struct{}{}, fmt.Errorf("%s already exists", filepath.Base(p.To))
 	}
@@ -217,8 +224,9 @@ func fsRename(p struct {
 func fsDelete(p struct {
 	Path string `json:"path"`
 }) (struct{}, error) {
-	clean := filepath.Clean(p.Path)
-	if clean == "/" || clean == "." || clean == "" {
+	clean := filepath.Clean(fromWire(p.Path))
+	// Never a whole drive or the root (or a relative path, which means nothing here).
+	if clean == "." || clean == "" || filepath.Dir(clean) == clean || !filepath.IsAbs(clean) {
 		return struct{}{}, errors.New("refusing to delete " + clean)
 	}
 	return struct{}{}, os.RemoveAll(clean)
@@ -232,7 +240,7 @@ type statResult struct {
 func fsStat(p struct {
 	Path string `json:"path"`
 }) (statResult, error) {
-	info, err := os.Stat(p.Path)
+	info, err := os.Stat(fromWire(p.Path))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return statResult{}, nil

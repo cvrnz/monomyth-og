@@ -1,6 +1,4 @@
-//go:build linux
-
-package main
+package agent
 
 import (
 	"bufio"
@@ -44,14 +42,17 @@ type filesResult struct {
 func fsFiles(p struct {
 	Root string `json:"root"`
 }) (filesResult, error) {
-	root := filepath.Clean(p.Root)
+	root := filepath.Clean(fromWire(p.Root))
 	if rg := rgPath(); rg != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, rg, "--files", "--hidden", "--glob", "!.git", "--no-messages")
+		cmd := commandContext(ctx, rg, "--files", "--hidden", "--glob", "!.git", "--no-messages")
 		cmd.Dir = root
 		out, _ := cmd.Output()
 		files := splitLines(out)
+		for i, f := range files {
+			files[i] = toWire(f)
+		}
 		res := filesResult{Files: files}
 		if len(files) > maxFiles {
 			res.Files, res.Truncated = files[:maxFiles], true
@@ -83,7 +84,7 @@ func (l *lister) add(abs string) bool {
 		return false
 	}
 	if rel, err := filepath.Rel(l.root, abs); err == nil {
-		l.files = append(l.files, rel)
+		l.files = append(l.files, toWire(rel))
 	}
 	return true
 }
@@ -167,7 +168,7 @@ func fsGrep(p struct {
 	Root  string `json:"root"`
 	Query string `json:"query"`
 }) (grepResult, error) {
-	root := filepath.Clean(p.Root)
+	root := filepath.Clean(fromWire(p.Root))
 	res := grepResult{Matches: []match{}}
 	if p.Query == "" {
 		return res, nil
@@ -177,7 +178,7 @@ func fsGrep(p struct {
 	}
 	files, _ := fsFiles(struct {
 		Root string `json:"root"`
-	}{root})
+	}{toWire(root)})
 	pattern := regexp.QuoteMeta(p.Query)
 	if !hasUpper(p.Query) {
 		pattern = "(?i)" + pattern
@@ -193,7 +194,7 @@ func fsGrep(p struct {
 		go func() {
 			defer wg.Done()
 			for rel := range jobs {
-				found := grepFile(filepath.Join(root, rel), rel, re)
+				found := grepFile(filepath.Join(root, fromWire(rel)), rel, re)
 				if len(found) == 0 {
 					continue
 				}
@@ -287,7 +288,7 @@ func rgGrep(rg, root, query string) (grepResult, error) {
 	res := grepResult{Matches: []match{}}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, rg, "--hidden", "--glob", "!.git", "--smart-case", "--fixed-strings",
+	cmd := commandContext(ctx, rg, "--hidden", "--glob", "!.git", "--smart-case", "--fixed-strings",
 		"--line-number", "--column", "--no-heading", "--with-filename", "--color", "never", "--no-messages",
 		"--max-count", "50", "--max-filesize", "4M", "--", query, ".")
 	cmd.Dir = root
@@ -311,7 +312,7 @@ func rgGrep(rg, root, query string) (grepResult, error) {
 		if col > 0 && col-1 <= len(text) {
 			col = utf8.RuneCountInString(text[:col-1]) + 1
 		}
-		res.Matches = append(res.Matches, match{Path: strings.TrimPrefix(parts[0], "./"), Line: line, Col: col, Text: clip(text)})
+		res.Matches = append(res.Matches, match{Path: strings.TrimPrefix(toWire(parts[0]), "./"), Line: line, Col: col, Text: clip(text)})
 		if len(res.Matches) >= maxMatches {
 			res.Truncated = true
 			cancel()
