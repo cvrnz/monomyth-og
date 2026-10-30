@@ -25,15 +25,28 @@ if [ ! -f internal/remote/agentbin/agent-linux-amd64 ]; then
   fi
 fi
 
+if curl -s -o /dev/null "$url"; then
+  echo "something is already running on $url (an earlier run left behind?); stop it first" >&2
+  exit 1
+fi
+
 pids=()
+# A process and everything under it: pnpm runs Vite as a grandchild, which would otherwise be
+# left running (and serving) after this script stops.
+killtree() {
+  local child
+  for child in $(pgrep -P "$1" 2>/dev/null); do
+    killtree "$child"
+  done
+  kill "$1" 2>/dev/null || true
+}
 stop() {
   # Also stops shells opened in the app's terminals.
   for pid in "${pids[@]}"; do
     if [ -r "/proc/$pid/winpid" ]; then
       taskkill //PID "$(cat "/proc/$pid/winpid")" //T //F >/dev/null 2>&1 || true
     else
-      pkill -P "$pid" 2>/dev/null || true
-      kill "$pid" 2>/dev/null || true
+      killtree "$pid"
     fi
   done
 }
