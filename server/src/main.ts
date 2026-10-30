@@ -9,6 +9,7 @@
 import http from 'node:http'
 import { parseArgs } from 'node:util'
 import { App } from './app.ts'
+import { Sql } from './sql/index.ts'
 
 const { values: flags } = parseArgs({
   options: { addr: { type: 'string', default: '127.0.0.1:34115' }, agent: { type: 'string', default: '' } },
@@ -23,6 +24,7 @@ const app = new App((event, data) => {
   for (const res of subscribers) res.write(msg)
 })
 app.localAgent = flags.agent
+const sql = new Sql()
 
 const methods: Record<string, (args: any[]) => unknown> = {
   Settings: () => app.Settings(),
@@ -37,6 +39,13 @@ const methods: Record<string, (args: any[]) => unknown> = {
   Call: ([method, params, id]) => app.Call(String(method ?? ''), String(params ?? ''), String(id ?? '')),
   SetDirty: () => app.SetDirty(),
   Quit: () => app.Quit(),
+  // SQL tabs' databases, reached from this computer.
+  SqlConnect: ([id, config]) => sql.connect(String(id ?? ''), config),
+  SqlQuery: ([id, text]) => sql.query(String(id ?? ''), String(text ?? '')),
+  SqlCancel: ([id]) => sql.cancel(String(id ?? '')),
+  SqlTables: ([id]) => sql.tables(String(id ?? '')),
+  SqlColumns: ([id, schema, table]) => sql.columns(String(id ?? ''), schema, table),
+  SqlDisconnect: ([id]) => sql.disconnect(String(id ?? '')),
 }
 
 // This server can read and write your files and run shells, so only this machine's pages may
@@ -97,7 +106,7 @@ server.listen(port, host, () => console.log(`monomyth server on http://${flags.a
 
 // Hang up the shells before exiting.
 const stop = async () => {
-  await app.DisconnectAll().catch(() => {})
+  await Promise.all([app.DisconnectAll().catch(() => {}), sql.closeAll().catch(() => {})])
   process.exit(0)
 }
 process.on('SIGINT', stop)
