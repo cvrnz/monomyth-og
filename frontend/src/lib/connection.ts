@@ -65,7 +65,7 @@ export async function connect(target: S.Target, id = S.get().project) {
       if (id === S.get().project) focusActive()
     } else if (S.project(id)!.tabs.length === 0) {
       const welcome: S.WelcomeTab = { id: S.newId(), kind: 'welcome' }
-      S.setProject(id, { tabs: [welcome], active: welcome.id, explorer: false })
+      S.setProject(id, { tabs: [welcome], active: welcome.id })
       if (id === S.get().project) focusActive()
     }
   } catch (err) {

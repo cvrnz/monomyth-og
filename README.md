@@ -4,8 +4,8 @@ Monomyth is a desktop editor for macOS and Windows, for files on your computer o
 Dev Spaces container. For a container it uses your `oc` login: pick a project, pod and
 container, and the app uploads a small agent into it (`oc exec`) that reads and writes files,
 runs shells and git. For local files the same agent runs inside the app. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
-status bar, command palette, floating explorer, source control tab, centered content and
-themes.
+status bar, command palette, explorer and source control tabs, centered content and
+themes. It also has SQL tabs, for querying databases.
 
 Built with Wails v3, React, TypeScript, HeroUI, Monaco (with monaco-vim) and xterm.js.
 
@@ -30,7 +30,7 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | P | Command palette |
 | F | Search file names; Tab switches to searching text |
 | G | Source control |
-| E | File explorer |
+| E | File explorer (in a tab; switches to it when it's open) |
 | T | Terminal in a new tab |
 | \\ | Terminal split below |
 | Shift+\\ | Terminal split to the right |
@@ -45,8 +45,8 @@ Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them. This works with the Nod
 (`scripts/dev.sh`); the desktop app's Go backend still has a single connection.
 
 Monomyth opens where you left off: the projects that were open reconnect, and their tabs come
-back once connected (files at the same cursor, terminals, source control, splits, the current
-tab and project). Unsaved changes and untitled files aren't kept, and terminals start new
+back once connected (files at the same cursor, terminals, source control, the explorer, SQL
+tabs with their query and connection, splits, the current tab and project). Unsaved changes and untitled files aren't kept, and terminals start new
 shells. If a project can't reconnect, its connect screen shows why, and its tabs come back
 when you connect it to the same place. This is saved as `session` in the settings file.
 
@@ -67,8 +67,24 @@ The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `Tog
 keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`; `:` in the file opens Vim's own
 prompt for those too). Tab completes the highlighted command.
 
-- **Explorer** (Cmd+E): `j`/`k` move, `l`/Enter open or expand, `h` collapse, `a` new file
-  (end with `/` for a folder), `r` rename or move, `d` delete, `y` copy the path, `R` refresh.
+- **Explorer** (Cmd+E): a tab, one per project, with the folder's tree and a preview of the
+  selected file; Cmd+E again switches to it and shows the file that was open. `j`/`k` move,
+  `l`/Enter open or expand, `h` collapse, `a` new file (end with `/` for a folder), `r` rename
+  or move, `d` delete, `y` copy the path, `R` refresh. Files open in a tab after it, and the
+  explorer stays open.
+- **SQL** (the `Sql` command, or `Sql <saved connection>`): a tab connected to a PostgreSQL,
+  MySQL/MariaDB, SQL Server or SQLite database. Queries run from this computer (not in the
+  container), with the Node server (`scripts/dev.sh`). The left lists the saved connections
+  (`a` new, `e` edit, `d` delete, Enter connect); connected, it lists the tables and views (by
+  schema when there are several) and their columns: `l`/`h` expand and collapse, Enter shows a
+  table's first 100 rows, `i` inserts the name in the query, `y` copies it, `R` refreshes.
+  Cmd+Enter (Ctrl+Enter) in the editor runs the selection, or all of it; several statements
+  give several results. Each result is a table (up to 10,000 rows): `h`/`j`/`k`/`l` move, `y`
+  or Cmd+C copies the cell, `Y` the row. Messages shows rows affected, notices and errors
+  (PostgreSQL's mark where in the query). Cancel stops a running query. SQLite takes a file
+  path (`C:\...` and `~/...` work, or `:memory:`); SQL Server signs in with Windows
+  authentication for a `DOMAIN\user` name. Connections, passwords included, are saved as
+  `sqlConnections` in the settings file.
 - **Source control** (Cmd+G): Repos and Changes lists (Tab switches), a side-by-side diff of
   the selected file, and a sync button that pulls, pushes or publishes the branch. Enter on a
   file opens it.
@@ -161,6 +177,8 @@ Checks: `go vet ./agent ./internal/...`, `cd frontend && pnpm build && pnpm lint
 - `main.go` — the Wails app and window.
 - `server/` — the same service in Node (TypeScript run directly by Node, no build), for the
   browser: `src/local` ports `internal/agent` for this computer (terminals on node-pty) and
-  `src/remote.ts` connects to containers with `oc` and the Go agent.
+  `src/remote.ts` connects to containers with `oc` and the Go agent. `src/sql` runs the SQL
+  tabs' queries (pg, mysql2, mssql, and Node's own SQLite in a child process so a query can
+  be stopped).
 - `frontend/src/lib` — the bridge to the backend, app state, actions, commands, shortcuts, themes.
   `frontend/src/components` — the screens and panes.

@@ -198,7 +198,7 @@ body,
   color: var(--red);
 }
 
-/* Floating windows: the explorer, the palette, search. */
+/* Floating windows: the palette, search. */
 .floating-backdrop {
   position: fixed;
   inset: 0;
@@ -294,6 +294,12 @@ body,
 }
 
 /* Explorer: tree on the left, preview on the right. */
+.explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--mono);
+}
 .explorer-body {
   display: flex;
   flex: 1;
@@ -802,4 +808,281 @@ body,
 
 .search-hit-line {
   background: var(--raised);
+}
+
+/* SQL: connections or tables on the left; the query above its results on the right. */
+.sql {
+  display: flex;
+  height: 100%;
+  font-family: var(--mono);
+}
+.sql-side {
+  flex: none;
+  width: 34ch;
+  min-width: 220px;
+  max-width: 40%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--separator);
+  outline: none;
+}
+.sql-title {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--dim);
+  padding: 4px 1ch 0;
+  height: var(--row);
+  flex: none;
+  white-space: pre;
+}
+.sql-title-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sql-title-x {
+  color: var(--dim);
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: default;
+}
+.sql-title-x:hover {
+  color: var(--fg);
+  background: var(--selection);
+}
+.sql-rows {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 20%, transparent) transparent;
+}
+.sql-side .row:not(.selected):hover {
+  background: color-mix(in srgb, var(--raised) 55%, transparent);
+}
+.sql-side:not(:focus-within) .row.selected {
+  background: color-mix(in srgb, var(--raised) 55%, transparent);
+}
+.sql-schema,
+.sql-table {
+  color: var(--blue);
+}
+.sql-view {
+  color: var(--cyan);
+}
+.sql-key {
+  color: var(--yellow);
+}
+.sql-conn-name {
+  color: var(--fg);
+}
+.sql-bad {
+  color: var(--red);
+}
+.sql-help {
+  color: var(--dim);
+  padding: 3px 1ch;
+  border-top: 1px solid var(--separator);
+  white-space: pre-wrap;
+  flex: none;
+}
+.sql-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.sql-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+.sql-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 1ch;
+  flex: none;
+  font-family: var(--sans);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sql-editor-host {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.sql-vim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.sql-splitter {
+  flex: none;
+  height: 5px;
+  cursor: row-resize;
+  border-top: 1px solid var(--separator);
+}
+.sql-splitter:hover {
+  background: color-mix(in srgb, var(--blue) 35%, transparent);
+}
+.sql-results {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sql-empty,
+.sql-running {
+  color: var(--dim);
+  padding: 8px 1ch;
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sql-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 0 1ch;
+  border-bottom: 1px solid var(--separator);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sql-tab {
+  padding: 3px 1.5ch;
+  color: var(--dim);
+  white-space: pre;
+  cursor: default;
+  border-bottom: 2px solid transparent;
+}
+.sql-tab.on {
+  color: var(--fg);
+  border-bottom-color: var(--blue);
+}
+.sql-messages {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 1ch;
+  white-space: pre-wrap;
+  user-select: text;
+  line-height: 1.6;
+}
+.sql-error {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+.sql-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+  white-space: pre;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 20%, transparent) transparent;
+}
+.sql-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: bold;
+  border-bottom: 1px solid var(--separator);
+}
+.sql-row {
+  position: absolute;
+  left: 0;
+}
+.sql-row.on {
+  background: color-mix(in srgb, var(--raised) 55%, transparent);
+}
+.sql-cell {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding: 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  border-right: 1px solid color-mix(in srgb, var(--separator) 60%, transparent);
+}
+.sql-cell.null {
+  color: var(--dim);
+  font-style: italic;
+}
+.sql-grid:focus .sql-cell.selected {
+  outline: 1px solid var(--blue);
+  outline-offset: -1px;
+  background: var(--raised);
+}
+.sql-cell.selected {
+  background: var(--raised);
+}
+.sql-num {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  height: 100%;
+  padding-right: 8px;
+  box-sizing: border-box;
+  text-align: right;
+  color: var(--dim);
+  background: var(--bg);
+  border-right: 1px solid var(--separator);
+}
+.sql-corner {
+  z-index: 3;
+}
+.sql-form {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--bg);
+  display: block;
+  font-family: var(--sans);
+}
+.sql-form-inner {
+  width: min(640px, 100% - 48px);
+  margin: 0 auto;
+  padding: 12px 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sql-form h2 {
+  margin-top: 12px;
+}
+.sql-form select.text-input {
+  height: 38px;
+}
+.sql-checks {
+  display: flex;
+  gap: 24px;
+  color: var(--dim);
+  font-size: 14px;
+}
+.sql-checks label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sql-form-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
