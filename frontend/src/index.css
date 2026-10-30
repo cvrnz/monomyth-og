@@ -8,6 +8,9 @@
   --mono: ui-monospace, Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --row: 22px;
+  /* The tab bar and status bar, and how far they keep from the window's edges. */
+  --bar: 30px;
+  --edge: 20px;
 }
 
 html,
@@ -38,8 +41,9 @@ body,
 
 .tabbar {
   display: flex;
-  height: var(--row);
-  line-height: var(--row);
+  gap: 2px;
+  height: var(--bar);
+  line-height: var(--bar);
   flex: none;
   overflow-x: auto;
   scrollbar-width: none;
@@ -49,7 +53,8 @@ body,
   display: none;
 }
 .tab {
-  padding: 0 1ch;
+  padding: 0 14px;
+  border-radius: 6px;
   color: var(--dim);
   cursor: default;
 }
@@ -67,13 +72,14 @@ body,
   background: color-mix(in srgb, var(--raised) 60%, transparent);
 }
 .tabbar-spacer {
-  height: var(--row);
+  height: 6px;
   flex: none;
 }
 .topbar {
   display: flex;
   flex: none;
   min-width: 0;
+  padding: 10px var(--edge) 0;
 }
 .topbar .tabbar {
   flex: 1;
@@ -83,19 +89,22 @@ body,
   display: flex;
   flex: none;
   max-width: 50%;
-  height: var(--row);
-  line-height: var(--row);
+  gap: 2px;
+  height: var(--bar);
+  line-height: var(--bar);
   overflow-x: auto;
   scrollbar-width: none;
   white-space: pre;
   border-right: 1px solid var(--raised);
-  margin-right: 1ch;
+  padding-right: 8px;
+  margin-right: 8px;
 }
 .projectbar::-webkit-scrollbar {
   display: none;
 }
 .project {
-  padding: 0 1ch;
+  padding: 0 12px;
+  border-radius: 6px;
   color: var(--dim);
   cursor: default;
 }
@@ -162,8 +171,10 @@ body,
 
 .statusbar {
   display: flex;
-  height: var(--row);
-  line-height: var(--row);
+  height: var(--bar);
+  line-height: var(--bar);
+  padding: 0 var(--edge);
+  margin-bottom: 8px;
   flex: none;
   color: var(--dim);
   white-space: pre;
