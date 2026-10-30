@@ -35,7 +35,7 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | \\ | Terminal split below |
 | Shift+\\ | Terminal split to the right |
 | H / L | Previous / next tab |
-| J / K | Next / previous split |
+| J / K | Next / previous pane: the parts of Explorer, Git and SQL (sidebar, editor, results), then splits |
 | 1 … 9 | Switch to the first … ninth project |
 
 Several projects (containers or local folders) can be open in one window, each with its own
@@ -49,6 +49,9 @@ back once connected (files at the same cursor, terminals, source control, the ex
 tabs with their query and connection, splits, the current tab and project). Unsaved changes and untitled files aren't kept, and terminals start new
 shells. If a project can't reconnect, its connect screen shows why, and its tabs come back
 when you connect it to the same place. This is saved as `session` in the settings file.
+
+The Explorer, Git and SQL tabs show a line of hints at the bottom: the keys for the part that
+has the focus (the sidebar, the query, the results, ...) and how to move to the next part.
 
 Shortcuts work everywhere, Vim's insert mode and terminals included. On Windows, Ctrl+Shift+<key>
 also works as Ctrl+<key>, except in a terminal, where it sends Ctrl+<key> to the shell instead

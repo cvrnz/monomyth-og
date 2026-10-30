@@ -14,8 +14,10 @@ import { copyText, errorText } from '../lib/bridge'
 import { choose, prompt, toast } from '../lib/dialogs'
 import { languageFor, monaco } from '../lib/monaco'
 import { register } from '../lib/panes'
+import { useParts } from '../lib/parts'
 import { dirname, isInside, join, pretty } from '../lib/paths'
 import * as S from '../lib/store'
+import Hints from './Hints'
 
 const neverShow = new Set(['.git', '.DS_Store'])
 
@@ -67,7 +69,13 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
     })
   }, [root, reveal, load])
 
-  useEffect(() => register(tab.id, { focus: () => tree.current?.focus() }), [tab.id])
+  // The tree, then the preview (Cmd+J/K).
+  const { part, setPart, list: parts, nav } = useParts('tree')
+  parts.current = [
+    { name: 'tree', focus: () => tree.current?.focus() },
+    ...(previewNote ? [] : [{ name: 'preview', focus: () => previewRef.current?.focus() }]),
+  ]
+  useEffect(() => register(tab.id, { focus: () => tree.current?.focus(), ...nav }), [tab.id, nav])
   useEffect(() => {
     if (active) requestAnimationFrame(() => tree.current?.focus())
   }, [active])
@@ -307,7 +315,7 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
   return (
     <div className="explorer">
         <div className="explorer-body">
-          <div className="explorer-tree" ref={tree} tabIndex={0} onKeyDown={onKeyDown}>
+          <div className="explorer-tree" ref={tree} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => setPart('tree')}>
             {nodes.map((n, i) => (
               <div
                 key={n.path}
@@ -324,14 +332,18 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
             ))}
             {error && <div className="empty bad">{error}</div>}
           </div>
-          <div className="explorer-preview">
+          <div className="explorer-preview" onFocus={() => setPart('preview')}>
             <div ref={previewHost} style={{ position: 'absolute', inset: 0, visibility: previewNote ? 'hidden' : undefined }} />
             {previewNote && <div className="note">{previewNote}</div>}
           </div>
         </div>
-        <div className="explorer-help">
-          Enter open   a new   r rename   d delete   y copy path   R refresh
-        </div>
+        <Hints
+          items={
+            part === 'preview'
+              ? ['↑/↓ scroll', 'select and copy text', 'Enter in the tree opens the file']
+              : ['j/k move', 'Enter open', 'l/h expand/collapse', 'a new', 'r rename', 'd delete', 'y copy path', 'R refresh']
+          }
+        />
     </div>
   )
 }

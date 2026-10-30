@@ -147,15 +147,22 @@ export function focusPane(tabId: string, paneId: string) {
   if (tab && tab.focus !== paneId) S.updateTab(tabId, { focus: paneId })
 }
 
-// Moves focus between a tab's panes (Cmd+J / Cmd+K, like moving between windows).
+// Moves focus between a tab's panes (Cmd+J / Cmd+K, like moving between windows): through
+// the parts of the explorer, Git or SQL, then on to the split terminals, and around.
 export function cyclePane(step: number) {
   const tab = S.activeTab()
-  if (!tab?.splits) return
-  const all = [tab.id, ...tab.splits.panes]
-  const i = all.indexOf(S.focusedPane(tab))
+  if (!tab) return
+  const focused = S.focusedPane(tab)
+  if (pane(focused)?.step?.(step)) return
+  const all = [tab.id, ...(tab.splits?.panes ?? [])]
+  const i = all.indexOf(focused)
   const next = all[(i + step + all.length) % all.length]
-  S.updateTab(tab.id, { focus: next })
-  focusActive()
+  if (next !== focused) S.updateTab(tab.id, { focus: next })
+  requestAnimationFrame(() => {
+    const h = pane(next)
+    if (h?.enter) h.enter(step)
+    else h?.focus()
+  })
 }
 
 // Cmd+W: closes the focused pane, or the tab when it's the tab's own content.
