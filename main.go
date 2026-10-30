@@ -18,7 +18,7 @@ func main() {
 	a := app.New()
 
 	wails := application.New(application.Options{
-		Name:        "Editor",
+		Name:        "Monomyth",
 		Description: "Edits files in an OpenShift or Dev Spaces container",
 		Services:    []application.Service{application.NewService(a)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
@@ -33,7 +33,7 @@ func main() {
 	// shortcut is dropped: Cmd+H is the editor's "previous tab".
 	if runtime.GOOS == "darwin" {
 		menu := application.NewMenu()
-		appMenu := menu.AddSubmenu("Editor")
+		appMenu := menu.AddSubmenu("Monomyth")
 		appMenu.AddRole(application.About)
 		appMenu.AddSeparator()
 		appMenu.AddRole(application.Hide)
@@ -47,7 +47,7 @@ func main() {
 	}
 
 	win := wails.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "Editor",
+		Title:            "Monomyth",
 		Width:            1400,
 		Height:           900,
 		MinWidth:         640,

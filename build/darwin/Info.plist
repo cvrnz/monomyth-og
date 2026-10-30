@@ -3,13 +3,13 @@
 <plist version="1.0">
 	<dict>
 		<key>CFBundleExecutable</key>
-		<string>editor</string>
+		<string>Monomyth</string>
 		<key>CFBundleIconFile</key>
 		<string>icons</string>
 		<key>CFBundleIdentifier</key>
-		<string>com.carlos.editor</string>
+		<string>com.carlos.monomyth</string>
 		<key>CFBundleName</key>
-		<string>Editor</string>
+		<string>Monomyth</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>

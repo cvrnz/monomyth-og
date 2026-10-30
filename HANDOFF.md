@@ -1,6 +1,6 @@
 # Handoff notes
 
-A standalone desktop editor (Wails v3 + Vite + React + TypeScript + HeroUI + pnpm) that runs on
+Monomyth: a standalone desktop editor (Wails v3 + Vite + React + TypeScript + HeroUI + pnpm) that runs on
 macOS/Windows and edits files inside a remote OpenShift/Dev Spaces container, through a small Go
 agent it uploads and starts with `oc exec`. Its behavior copies the Neovim config in
 `dev/configs/nvim`. See README.md for using, building and developing it.
@@ -16,7 +16,7 @@ Everything in the original plan is built:
 - **Wails v3**: `main.go` (service, window 1400×900 / min 640×400, close hook and `ShouldQuit`
   asking about unsaved changes, macOS menu with App + Edit roles, Hide's Cmd+H removed since
   Cmd+H is "previous tab"), `Taskfile.yml` + `build/` from a `wails3 init -t react` scaffold
-  (pnpm, Editor / com.carlos.editor, icons from `build/appicon.png`). `build:agent` runs before
+  (pnpm, Monomyth / com.carlos.monomyth, icons from `build/appicon.png`). `build:agent` runs before
   every platform build. `wails.json` is gone.
 - **Agent**: added `fs.files` and `fs.grep` (agent/search.go) for Cmd+P: ripgrep when present,
   otherwise `git ls-files` (respects .gitignore) / a walk, and a Go search.
@@ -40,7 +40,7 @@ Everything in the original plan is built:
 
 - `go vet` (linux + windows), `tsc`, `pnpm build`, `oxlint` (warnings only, React-compiler
   advisories).
-- `wails3 task windows:build ARCH=amd64` produces a working-looking `bin/editor.exe` (PE x64,
+- `wails3 task windows:build ARCH=amd64` produces a working-looking `bin/Monomyth.exe` (PE x64,
   GUI subsystem, agents embedded). It hasn't been run on Windows.
 - Browser tests with Playwright against `cmd/devserver` + a local agent: connect, welcome,
   file/text search, open at line, Vim editing, `:w`, `:%s` through the palette, theme preview,

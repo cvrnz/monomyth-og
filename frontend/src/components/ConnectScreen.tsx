@@ -153,7 +153,7 @@ export default function ConnectScreen() {
   return (
     <div className="connect">
       <div className="connect-inner">
-        <h1>Editor</h1>
+        <h1>Monomyth</h1>
         <div className="sub">Edit files on this computer, or in an OpenShift or Dev Spaces container.</div>
 
         {busy && (

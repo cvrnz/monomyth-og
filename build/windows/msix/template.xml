@@ -8,13 +8,13 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="editor"
+        Path="Monomyth"
         Arguments=""
-        InstallLocation="C:\Program Files\Carlos Hernandez\Editor">
+        InstallLocation="C:\Program Files\Carlos Hernandez\Monomyth">
     </Installer>
     <PackageInformation
-        PackageName="Editor"
-        PackageDisplayName="Editor"
+        PackageName="Monomyth"
+        PackageDisplayName="Monomyth"
         PublisherName="CN=Carlos Hernandez"
         PublisherDisplayName="Carlos Hernandez"
         Version="0.1.0.0"
@@ -25,10 +25,10 @@
         </Capabilities>
         <Applications>
             <Application
-                Id="com.carlos.editor"
+                Id="com.carlos.monomyth"
                 Description="Edits files in an OpenShift or Dev Spaces container"
-                DisplayName="Editor"
-                ExecutableName="editor"
+                DisplayName="Monomyth"
+                ExecutableName="Monomyth"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>Editor</DisplayName>
+            <DisplayName>Monomyth</DisplayName>
             <PublisherDisplayName>Carlos Hernandez</PublisherDisplayName>
             <Description>Edits files in an OpenShift or Dev Spaces container</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="editor.msix" />
+    <SaveLocation PackagePath="monomyth.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

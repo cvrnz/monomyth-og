@@ -63,7 +63,7 @@ func (t *terminals) open(p openParams) (map[string]string, error) {
 	}
 	cmd := pt.Command(shell, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "SHELL="+shell, "TERM_PROGRAM=editor")
+	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "SHELL="+shell, "TERM_PROGRAM=monomyth")
 	if err := cmd.Start(); err != nil {
 		pt.Close()
 		return nil, err
