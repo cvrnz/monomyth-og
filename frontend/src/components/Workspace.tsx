@@ -26,7 +26,7 @@ export function tabLabel(tab: S.Tab): string {
   if (S.focusedPane(tab) !== tab.id) return 'Terminal'
   switch (tab.kind) {
     case 'scm':
-      return 'Source Control'
+      return 'Git'
     case 'welcome':
       return 'Welcome'
     case 'terminal':

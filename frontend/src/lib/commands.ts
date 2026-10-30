@@ -54,7 +54,7 @@ export const commands: Command[] = [
       toast(vim ? 'Vim keybindings on' : 'Vim keybindings off')
     },
   },
-  { name: 'Explorer', desc: 'File explorer', keys: 'E', run: () => A.openExplorer() },
+  { name: 'Explorer', desc: 'File explorer (and back)', keys: 'E', run: () => A.openExplorer() },
   {
     name: 'Sql',
     desc: 'Query a database in a new tab (PostgreSQL, MySQL, SQL Server, SQLite)',
@@ -74,7 +74,7 @@ export const commands: Command[] = [
     aliases: ['SearchText'],
     run: (args) => S.set({ search: { kind: 'text', text: args.trim() }, palette: null }),
   },
-  { name: 'SourceControl', desc: 'Source control', keys: 'G', aliases: ['Git'], run: () => A.openScm() },
+  { name: 'Git', desc: 'Source control (and back)', keys: 'G', aliases: ['SourceControl'], run: () => A.openScm() },
   { name: 'Terminal', desc: 'Terminal in new tab', keys: 'T', aliases: ['terminal', 'term'], run: () => A.openTerminal() },
   { name: 'Split', desc: 'Terminal in horizontal split', keys: '\\', aliases: ['split', 'sp'], run: () => A.splitTerminal('below') },
   {
