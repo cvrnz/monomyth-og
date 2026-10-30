@@ -6,7 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { LocalAgent } from './local/agent.ts'
 import { AgentProcess, Oc, type Target } from './remote.ts'
-import { isWindows, run, toWire } from './wire.ts'
+import { fromWindowsPath, isWindows, isWsl, run, toWire } from './wire.ts'
 
 type Emit = (event: string, data: unknown) => void
 
@@ -153,7 +153,7 @@ export class App {
   // Asks for a folder on this computer with the system's picker. An empty result means it was
   // cancelled.
   async PickFolder(): Promise<string> {
-    if (isWindows) {
+    if (isWindows || isWsl) {
       const script = [
         '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
         'Add-Type -AssemblyName System.Windows.Forms',
@@ -164,7 +164,9 @@ export class App {
       ].join('; ')
       const r = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-STA', '-Command', script])
       if (!r.ok) throw new Error(r.stderr.trim() || 'the folder picker failed')
-      return toWire(r.stdout.toString('utf8').trim())
+      const picked = r.stdout.toString('utf8').trim()
+      // Under WSL the picker is Windows' own; its C:\... answer is a /mnt/c/... path here.
+      return picked && isWsl ? fromWindowsPath(picked) : toWire(picked)
     }
     if (process.platform === 'darwin') {
       const r = await run('osascript', ['-e', 'POSIX path of (choose folder with prompt "Open a folder")'])

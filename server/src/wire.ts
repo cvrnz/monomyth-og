@@ -1,11 +1,32 @@
 // Helpers shared by the local agent and the oc side: wire paths, finding commands on PATH and
 // running them.
-import { spawn } from 'node:child_process'
-import { statSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { readFileSync, statSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
 export const isWindows = process.platform === 'win32'
+
+export const isWsl =
+  process.platform === 'linux' &&
+  (() => {
+    try {
+      return /microsoft/i.test(readFileSync('/proc/version', 'utf8'))
+    } catch {
+      return false
+    }
+  })()
+
+// Under WSL, a Windows path (C:\Users\..., C:/Users/..., \\wsl.localhost\...) as the Linux
+// path it's mounted at. Other paths come back as they are.
+export function fromWindowsPath(p: string): string {
+  if (!isWsl || !/^([A-Za-z]:([\\/]|$)|\\\\)/.test(p)) return p
+  try {
+    return execFileSync('wslpath', ['-u', p], { encoding: 'utf8' }).trim() || p
+  } catch {
+    return p
+  }
+}
 
 // Paths go over the wire with forward slashes on every OS (C:/Users/... on Windows).
 export const toWire = (p: string) => (isWindows ? p.replaceAll('\\', '/') : p)

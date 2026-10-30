@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto'
 import { constants, promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { clean, expandHome, fromWire, isBinary, isWindows, toWire } from '../wire.ts'
+import { clean, expandHome, fromWindowsPath, fromWire, isBinary, isWindows, toWire } from '../wire.ts'
 import { loginShell } from './term.ts'
 
 const maxReadBytes = 20 * 1024 * 1024
@@ -15,7 +15,7 @@ const exists = (p: string) => fs.lstat(p).then(() => true, () => false)
 // server started, else home.
 export async function hello(p: { root?: string }) {
   const home = os.homedir()
-  let root = fromWire(p.root || '') || process.env.PROJECTS_ROOT || ''
+  let root = fromWindowsPath(fromWire(p.root?.trim() || '')) || process.env.PROJECTS_ROOT || ''
   if (!root && process.cwd() !== '/') root = process.cwd()
   root = expandHome(root || home)
   const info = await fs.stat(root).catch(() => undefined)
