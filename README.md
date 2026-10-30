@@ -24,13 +24,13 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 
 | Shortcut | Action |
 |----------|--------|
-| W | Close the tab or split (asks about unsaved changes; closing the last tab closes the project, or quits when it's the only one) |
+| W | Close the tab or split (asks about unsaved changes; the Explorer and Git tabs stay, and closing the last other tab leaves a welcome screen) |
 | S | Save (asks for a path for a new file) |
 | N | New tab |
 | P | Command palette |
 | F | Search file names; Tab switches to searching text |
-| G | Source control |
-| E | File explorer (in a tab; switches to it when it's open) |
+| G | Git (source control); again to go back to the tab you were on |
+| E | File explorer; again to go back to the tab you were on |
 | T | Terminal in a new tab |
 | \\ | Terminal split below |
 | Shift+\\ | Terminal split to the right |
@@ -67,11 +67,13 @@ The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `Tog
 keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`; `:` in the file opens Vim's own
 prompt for those too). Tab completes the highlighted command.
 
-- **Explorer** (Cmd+E): a tab, one per project, with the folder's tree and a preview of the
-  selected file; Cmd+E again switches to it and shows the file that was open. `j`/`k` move,
-  `l`/Enter open or expand, `h` collapse, `a` new file (end with `/` for a folder), `r` rename
-  or move, `d` delete, `y` copy the path, `R` refresh. Files open in a tab after it, and the
-  explorer stays open.
+Every project's first two tabs are Explorer and Git, which can't be closed; the tabs you open
+come after them.
+
+- **Explorer** (Cmd+E, again to go back): the folder's tree and a preview of the selected
+  file, showing the file that was open. `j`/`k` move, `l`/Enter open or expand, `h` collapse,
+  `a` new file (end with `/` for a folder), `r` rename or move, `d` delete, `y` copy the path,
+  `R` refresh. Files open in a tab of their own.
 - **SQL** (the `Sql` command, or `Sql <saved connection>`): a tab connected to a PostgreSQL,
   MySQL/MariaDB, SQL Server or SQLite database. Queries run from this computer (not in the
   container), with the Node server (`scripts/dev.sh`). The left lists the saved connections
@@ -85,7 +87,7 @@ prompt for those too). Tab completes the highlighted command.
   path (`C:\...` and `~/...` work, or `:memory:`); SQL Server signs in with Windows
   authentication for a `DOMAIN\user` name. Connections, passwords included, are saved as
   `sqlConnections` in the settings file.
-- **Source control** (Cmd+G): Repos and Changes lists (Tab switches), a side-by-side diff of
+- **Git** (Cmd+G, again to go back): Repos and Changes lists (Tab switches), a side-by-side diff of
   the selected file, and a sync button that pulls, pushes or publishes the branch. Enter on a
   file opens it.
 - **Welcome**: Tab shows another piece of art; `i`, `a` or `o` starts a new file.

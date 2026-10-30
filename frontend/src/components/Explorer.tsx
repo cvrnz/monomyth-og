@@ -1,6 +1,6 @@
-// The file explorer (Cmd+E): a tab of its own, one per project, with the folder's tree on the
-// left and a preview of the selected file on the right. It shows the file that was open when
-// it was asked for. Files open in a tab after it, and it stays open. Hidden files show; .git
+// The file explorer (Cmd+E, and again to go back): every project's first tab, with the
+// folder's tree on the left and a preview of the selected file on the right. It shows the file
+// that was open when it was switched to. Files open in a tab of their own. Hidden files show; .git
 // and .DS_Store never do (as in the nvim config's neo-tree).
 //
 //   j/k ↑/↓  move          Enter/o  open file, expand or collapse folder

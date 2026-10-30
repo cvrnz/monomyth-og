@@ -45,7 +45,8 @@ function snapshot(): S.SavedSession {
       if (c.state === 'idle') continue
       const target = S.isConnected(c) ? { ...c.target, folder: c.target.folder || c.hello.root } : c.target
       const tabs: S.SavedTab[] = []
-      let active = 0
+      // -1 when the current tab isn't kept (an untitled file): your first tab comes back current.
+      let active = -1
       for (const t of p.tabs) {
         const st = saveTab(t)
         if (!st) continue
@@ -81,8 +82,10 @@ export function restoredTabs(id: string, target: S.Target): Pick<S.Project, 'tab
   if (!saved) return null
   pending.delete(id)
   if (!sameTarget(saved.target, target) || saved.tabs.length === 0) return null
-  const tabs = saved.tabs.map(openTab)
-  return { tabs, active: (tabs[saved.active] ?? tabs[0]).id }
+  const opened = saved.tabs.map(openTab)
+  const tabs = S.withFixed(opened)
+  const active = opened[saved.active] ?? tabs[2]
+  return { tabs, active: tabs.includes(active) ? active.id : tabs[2].id }
 }
 
 let last = ''

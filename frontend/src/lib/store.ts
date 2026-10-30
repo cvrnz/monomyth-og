@@ -81,6 +81,20 @@ export type ExplorerTab = TabBase & { kind: 'explorer'; reveal?: string }
 export type SqlTab = TabBase & { kind: 'sql'; conn?: string; text?: string }
 export type Tab = FileTab | TerminalTab | ScmTab | WelcomeTab | ExplorerTab | SqlTab
 
+// Every connected project's first two tabs: the explorer, then Git. They can't be closed.
+export function isFixed(t: Tab): boolean {
+  return t.kind === 'explorer' || t.kind === 'scm'
+}
+
+// The tabs in order: the explorer and Git (made if missing, one of each) before the rest, and
+// a welcome screen when there's nothing else.
+export function withFixed(tabs: Tab[]): Tab[] {
+  const explorer = tabs.find((t) => t.kind === 'explorer') ?? { id: newId(), kind: 'explorer' }
+  const git = tabs.find((t) => t.kind === 'scm') ?? { id: newId(), kind: 'scm' }
+  const rest = tabs.filter((t) => !isFixed(t))
+  return [explorer, git, ...(rest.length ? rest : [{ id: newId(), kind: 'welcome' } as WelcomeTab])]
+}
+
 export type Connection =
   | { state: 'idle'; error?: string }
   | { state: 'connecting'; status: string; target: Target }

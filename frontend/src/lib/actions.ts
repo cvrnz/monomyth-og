@@ -1,9 +1,9 @@
 // What the shortcuts, the palette and the menus do: opening and closing tabs, splits, saving.
 // Behaves like the nvim config: files open in the current tab when it's empty, otherwise in a
-// new tab after it; closing the last tab quits.
+// new tab after it. The explorer and Git are always the first two tabs; closing the last of
+// the others leaves a welcome screen.
 import { agent } from './agent'
 import { errorText, inWails, invoke } from './bridge'
-import { closeProject } from './connection'
 import { choose, prompt, toast } from './dialogs'
 import { pane } from './panes'
 import { saveSessionNow } from './session'
@@ -14,11 +14,13 @@ export function root(): string {
   return S.connected()?.root ?? '/'
 }
 
+// After the current tab, and never before the explorer and Git.
 function insertTab(tab: S.Tab) {
   S.set((s) => {
     const tabs = [...s.tabs]
+    const fixed = tabs.filter(S.isFixed).length
     const i = tabs.findIndex((t) => t.id === s.active)
-    tabs.splice(i + 1, 0, tab)
+    tabs.splice(Math.max(i + 1, fixed), 0, tab)
     return { tabs, active: tab.id }
   })
 }
@@ -33,6 +35,15 @@ function isEmpty(tab: S.Tab | undefined): boolean {
   if (!tab || tab.splits) return false
   if (tab.kind === 'welcome') return true
   return tab.kind === 'file' && tab.path === null && !tab.dirty && (pane(tab.id)?.isEmpty?.() ?? true)
+}
+
+// Where a file (or a welcome screen) can open in place of what's there: the current tab when
+// it's empty, or, from the explorer or Git, your only tab when that's empty.
+function emptySpot(): S.Tab | undefined {
+  const current = S.activeTab()
+  if (isEmpty(current)) return current
+  const mine = S.get().tabs.filter((t) => !S.isFixed(t))
+  if (current && S.isFixed(current) && mine.length === 1 && isEmpty(mine[0])) return mine[0]
 }
 
 export function activate(id: string) {
@@ -56,8 +67,8 @@ export function openFile(path: string, line?: number, col?: number) {
     return
   }
   const tab: S.FileTab = { id: S.newId(), kind: 'file', path, dirty: false, line, col }
-  const current = S.activeTab()
-  if (isEmpty(current)) replaceTab(current!.id, tab)
+  const spot = emptySpot()
+  if (spot) replaceTab(spot.id, tab)
   else insertTab(tab)
 }
 
@@ -74,9 +85,9 @@ export function newFileHere() {
 }
 
 export function openWelcome() {
-  const current = S.activeTab()
   const tab: S.WelcomeTab = { id: S.newId(), kind: 'welcome' }
-  if (isEmpty(current)) replaceTab(current!.id, tab)
+  const spot = emptySpot()
+  if (spot) replaceTab(spot.id, tab)
   else insertTab(tab)
 }
 
@@ -93,23 +104,31 @@ export function splitTerminal(dir: S.Splits['dir']) {
   S.updateTab(tab.id, { splits: { dir, panes }, focus: id })
 }
 
-export function openScm() {
-  insertTab({ id: S.newId(), kind: 'scm' })
-}
+// The tab each project was on before going to its explorer or Git, by project and kind.
+const back = new Map<string, string>()
 
-// Cmd+E: the project's explorer tab (made the first time), showing the file that was open.
-export function openExplorer() {
-  const current = S.activeTab()
-  const reveal = current?.kind === 'file' && current.path ? current.path : undefined
+// Cmd+E / Cmd+G: to the explorer or Git, or, from there, back to the tab you came from.
+function toggleFixed(kind: 'explorer' | 'scm') {
+  const s = S.get()
+  const target = s.tabs.find((t) => t.kind === kind)
+  if (!target) return
   S.set({ palette: null, search: null })
-  const existing = S.get().tabs.find((t) => t.kind === 'explorer')
-  if (existing) {
-    if (reveal) S.updateTab(existing.id, { reveal })
-    activate(existing.id)
+  const key = `${s.project}:${kind}`
+  if (s.active === target.id) {
+    const prev = s.tabs.find((t) => t.id === back.get(key) && t.id !== target.id) ?? s.tabs.find((t) => !S.isFixed(t))
+    if (prev) activate(prev.id)
+    else focusActive()
     return
   }
-  insertTab({ id: S.newId(), kind: 'explorer', reveal })
+  if (s.active) back.set(key, s.active)
+  // The explorer shows the file that was open.
+  const current = S.activeTab()
+  if (kind === 'explorer' && current?.kind === 'file' && current.path) S.updateTab(target.id, { reveal: current.path })
+  activate(target.id)
 }
+
+export const openExplorer = () => toggleFixed('explorer')
+export const openScm = () => toggleFixed('scm')
 
 // A SQL tab, connected to a saved connection if one's named.
 export function openSql(conn?: string) {
@@ -171,7 +190,8 @@ async function settle(tab: S.Tab): Promise<boolean> {
 
 export async function closeTab(id: string) {
   const tab = S.get().tabs.find((t) => t.id === id)
-  if (!tab || !(await settle(tab))) return
+  // The explorer and Git stay (their split terminals close with Cmd+W in them).
+  if (!tab || S.isFixed(tab) || !(await settle(tab))) return
   const { tabs, active } = S.get()
   const i = tabs.findIndex((t) => t.id === id)
   // Split terminals outlive the content they were split from: the first one takes the tab.
@@ -188,18 +208,18 @@ export async function closeTab(id: string) {
     return
   }
   const remaining = tabs.filter((t) => t.id !== id)
-  if (remaining.length === 0) {
-    // With other projects open, closing a project's last tab closes the project.
-    if (S.get().projects.length > 1) {
-      closeProject(S.get().project)
-      return
-    }
-    S.set({ tabs: [], active: null })
-    await quit()
+  // Closing the last tab (besides the explorer and Git) leaves a welcome screen in its place.
+  if (!remaining.some((t) => !S.isFixed(t))) {
+    const welcome: S.WelcomeTab = { id: S.newId(), kind: 'welcome' }
+    S.set({ tabs: [...remaining, welcome], active: welcome.id })
+    focusActive()
     return
   }
-  // Like closing a tab in nvim: the one before it becomes current (the next one for the first).
-  const nextActive = active === id ? remaining[Math.max(0, i - 1)].id : active
+  // Like closing a tab in nvim: the one before it becomes current (the next one for the first),
+  // among yours rather than the explorer or Git.
+  const before = tabs.slice(0, i).filter((t) => !S.isFixed(t)).pop()
+  const after = tabs.slice(i + 1).find((t) => !S.isFixed(t))
+  const nextActive = active === id ? (before ?? after)!.id : active
   S.set({ tabs: remaining, active: nextActive })
   focusActive()
 }
