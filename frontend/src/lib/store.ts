@@ -21,6 +21,8 @@ export type Settings = {
   recents: Target[]
   // Databases saved in SQL tabs, passwords included.
   sqlConnections?: SqlConnection[]
+  // Sidebar widths in pixels, as dragged (SideSplitter); unset is the default width.
+  sideWidths?: { explorer?: number; git?: number; sql?: number }
   // What was open when the app last closed, reopened at start (lib/session.ts).
   session?: SavedSession
 }

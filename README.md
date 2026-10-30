@@ -53,6 +53,8 @@ when you connect it to the same place. This is saved as `session` in the setting
 
 The Explorer, Git and SQL tabs show a line of hints at the bottom: the keys for the part that
 has the focus (the sidebar, the query, the results, ...) and how to move to the next part.
+Their sidebars can be resized by dragging the line beside them (double-click it for the default
+width); the widths are kept as `sideWidths` in the settings file.
 
 Shortcuts work everywhere, Vim's insert mode and terminals included. On Windows, Ctrl+Shift+<key>
 also works as Ctrl+<key>, except in a terminal, where it sends Ctrl+<key> to the shell instead

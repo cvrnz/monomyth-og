@@ -20,6 +20,7 @@ import * as S from '../lib/store'
 import Hints from './Hints'
 
 const neverShow = new Set(['.git', '.DS_Store'])
+import SideSplitter, { sideStyle, useSideWidth } from './SideSplitter'
 
 type Node = { path: string; name: string; dir: boolean; link: boolean; depth: number }
 
@@ -47,6 +48,7 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
   const [previewNote, setPreviewNote] = useState('')
 
   const load = useCallback(async (dir: string): Promise<Entry[]> => {
+  const treeWidth = useSideWidth('explorer')
     try {
       const list = (await agent.list(dir)).filter((e) => !neverShow.has(e.name))
       setChildren((m) => new Map(m).set(dir, list))
@@ -315,7 +317,14 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
   return (
     <div className="explorer">
         <div className="explorer-body">
-          <div className="explorer-tree" ref={tree} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => setPart('tree')}>
+          <div
+            className="explorer-tree"
+            ref={tree}
+            tabIndex={0}
+            onKeyDown={onKeyDown}
+            onFocus={() => setPart('tree')}
+            style={sideStyle(treeWidth)}
+          >
             {nodes.map((n, i) => (
               <div
                 key={n.path}
@@ -347,3 +356,6 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
     </div>
   )
 }
+                {n.dir
+                  ? (changedDirs.has(n.path) || changed.has(n.path)) && <span className="st-M" title="Has uncommitted changes"> •</span>
+                  : changed.has(n.path) && <span className={`st-${changed.get(n.path)}`}>  {changed.get(n.path)}</span>}
