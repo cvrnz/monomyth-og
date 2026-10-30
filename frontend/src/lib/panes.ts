@@ -9,7 +9,6 @@ export type PaneHandle = {
   isEmpty?(): boolean
   reveal?(line: number, col?: number): void
   vimEx?(command: string): void
-  vimInsert?(): boolean
   // Terminals: whether keys go to the shell (not in normal mode).
   shellInput?(): boolean
   editor?: Monaco.editor.ICodeEditor
