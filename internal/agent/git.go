@@ -1,12 +1,9 @@
-//go:build linux
-
-package main
+package agent
 
 import (
 	"bytes"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -24,7 +21,7 @@ type gitResult struct {
 // Runs git in a repo. With quiet set, talking to remotes never prompts: a remote that needs a
 // password or an unknown host key just fails, rather than waiting on input nobody can type.
 func git(repo string, quiet bool, args ...string) gitResult {
-	cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+	cmd := command("git", append([]string{"-C", repo}, args...)...)
 	cmd.Env = os.Environ()
 	if quiet {
 		cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0")
@@ -219,7 +216,7 @@ func infoOf(path, name string) repoInfo {
 	go func() { defer wg.Done(); r.Remote = remoteOf(path) }()
 	go func() { defer wg.Done(); r.Count = len(changes(path)) }()
 	wg.Wait()
-	r.Path, r.Name = path, name
+	r.Path, r.Name = toWire(path), toWire(name)
 	r.Arrows = arrows(r.Sync)
 	r.Action = actionFor(r.Sync, r.Remote)
 	return r
@@ -233,6 +230,7 @@ func scmRepos(p struct {
 	var all []found
 	seen := map[string]bool{}
 	for _, root := range p.Roots {
+		root = fromWire(root)
 		for _, repo := range findRepos(root) {
 			if seen[repo] {
 				continue
@@ -262,7 +260,7 @@ func scmRepos(p struct {
 func scmChanges(p struct {
 	Repo string `json:"repo"`
 }) ([]change, error) {
-	return changes(p.Repo), nil
+	return changes(fromWire(p.Repo)), nil
 }
 
 type version struct {
@@ -275,6 +273,7 @@ func scmVersions(p struct {
 	Repo   string `json:"repo"`
 	Change change `json:"change"`
 }) (map[string]version, error) {
+	p.Repo = fromWire(p.Repo)
 	toVersion := func(data []byte) version {
 		head := data
 		if len(head) > 8000 {
@@ -309,6 +308,7 @@ func scmFetch(p struct {
 	Repo string `json:"repo"`
 	Name string `json:"name"`
 }) (repoInfo, error) {
+	p.Repo = fromWire(p.Repo)
 	r := git(p.Repo, true, "fetch", "--quiet", "--no-tags")
 	if !r.ok {
 		return repoInfo{}, errors.New(strings.TrimSpace(r.stderr))
@@ -320,6 +320,7 @@ func scmFetch(p struct {
 func scmSync(p struct {
 	Repo string `json:"repo"`
 }) (struct{}, error) {
+	p.Repo = fromWire(p.Repo)
 	a := actionFor(syncOf(p.Repo), remoteOf(p.Repo))
 	if a == nil {
 		return struct{}{}, errors.New("this branch has no remote to sync with")
