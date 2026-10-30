@@ -313,6 +313,25 @@ body,
   padding: 4px 0;
   outline: none;
 }
+/* Sits over the sidebar's right border, a few pixels wide to be easy to grab. */
+.side-splitter {
+  flex: none;
+  width: 6px;
+  margin-left: -4px;
+  margin-right: -2px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 2;
+}
+.side-splitter:hover,
+.resizing-cols .side-splitter {
+  background: color-mix(in srgb, var(--blue) 35%, transparent);
+}
+.resizing-cols,
+.resizing-cols * {
+  cursor: col-resize !important;
+  user-select: none;
+}
 .explorer-tree .row.selected {
   background: var(--raised);
 }

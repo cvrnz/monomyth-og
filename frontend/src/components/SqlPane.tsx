@@ -21,6 +21,7 @@ import * as sql from '../lib/sql'
 import * as S from '../lib/store'
 import { setupVim } from '../lib/vim'
 import Hints from './Hints'
+import SideSplitter, { sideStyle, useSideWidth } from './SideSplitter'
 import SqlGrid from './SqlGrid'
 
 type Props = { tab: S.SqlTab; active: boolean }
@@ -73,6 +74,7 @@ export default function SqlPane({ tab, active }: Props) {
 
   const side = useRef<HTMLDivElement>(null)
   const right = useRef<HTMLDivElement>(null)
+  const sideWidth = useSideWidth('sql')
   const host = useRef<HTMLDivElement>(null)
   const vimNode = useRef<HTMLDivElement>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -598,7 +600,7 @@ export default function SqlPane({ tab, active }: Props) {
   return (
     <div className="sql">
       <div className="sql-body">
-      <div className="sql-side" ref={side} tabIndex={0} onKeyDown={onSideKey} onFocus={() => setPart('side')}>
+      <div className="sql-side" ref={side} tabIndex={0} onKeyDown={onSideKey} onFocus={() => setPart('side')} style={sideStyle(sideWidth)}>
         <div className="sql-title">
           {info ? (
             <>
@@ -643,6 +645,7 @@ export default function SqlPane({ tab, active }: Props) {
           ))}
         </div>
       </div>
+      <SideSplitter side="sql" target={side} />
       <div className="sql-main" ref={right}>
         <div className="sql-editor" style={{ height: `${split * 100}%` }} onFocus={() => setPart('editor')}>
           <div className="sql-toolbar">

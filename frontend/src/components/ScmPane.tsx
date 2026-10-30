@@ -14,6 +14,7 @@ import { useParts } from '../lib/parts'
 import { isInside, join, pretty } from '../lib/paths'
 import * as S from '../lib/store'
 import Hints from './Hints'
+import SideSplitter, { sideStyle, useSideWidth } from './SideSplitter'
 
 type Busy = { repo: string; verb: string; frame: number } | { repo: string; text: string; cls: string }
 type Row = { text: React.ReactNode; width: number; item?: { repo?: Repo; change?: Change; sync?: boolean } }
@@ -186,6 +187,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
   const shownChange = changeCursor >= 0 ? changeRows[changeCursor].item?.change : undefined
 
   // Sidebar as wide as its widest line (both lists), up to half the pane.
+  const dragged = useSideWidth('git')
   const sideWidth = Math.max(18, ...repoRows.map((r) => r.width), ...changeRows.map((r) => r.width)) + 3
 
   // Status bar: the selected repo, its branch and commits to pull and push.
@@ -398,7 +400,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
           tabIndex={0}
           onKeyDown={onKeyDown}
           onFocus={() => setPart('side')}
-          style={{ width: `${sideWidth}ch` }}
+          style={sideStyle(dragged) ?? { width: `${sideWidth}ch` }}
         >
           {list('repos', 'Repos', repoRows)}
           {list(
@@ -409,6 +411,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
             changeRows,
           )}
         </div>
+        <SideSplitter side="git" target={side} />
         <div className="scm-diff" onFocus={() => setPart('diff')}>
           <div className="scm-labels">
             <div>{label(shownChange, 'old')}</div>
