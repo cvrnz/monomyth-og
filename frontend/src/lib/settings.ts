@@ -1,9 +1,10 @@
 // Loading and saving settings (the Go side stores them as JSON in the user's config folder),
 // and applying the theme everywhere.
 import { invoke } from './bridge'
+import { toast } from './dialogs'
 import { monaco } from './monaco'
 import * as S from './store'
-import { applyChrome, themeNamed } from './themes'
+import { applyChrome, monacoTheme, type Palette, parseTheme, setUserThemes, themeNamed } from './themes'
 
 export async function loadSettings() {
   const [raw, platform] = await Promise.all([invoke<string>('Settings').catch(() => '{}'), invoke<string>('Platform').catch(() => 'darwin')])
@@ -15,6 +16,7 @@ export async function loadSettings() {
   }
   S.set({ platform, settings: { ...S.defaultSettings, ...saved } })
   document.documentElement.dataset.platform = platform
+  await loadUserThemes()
 }
 
 export function updateSettings(patch: Partial<S.Settings>) {
@@ -36,4 +38,23 @@ export function applyTheme() {
   applied = p.name
   applyChrome(p)
   monaco.editor.setTheme(p.name)
+}
+
+// (Re)reads the user's themes from the themes folder next to the settings, so a changed file
+// shows the next time Themes is opened.
+export async function loadUserThemes() {
+  const files = await invoke<{ file: string; text: string }[]>('Themes').catch(() => [])
+  const list: Palette[] = []
+  for (const f of files ?? []) {
+    const t = parseTheme(f.file, f.text)
+    if (typeof t === 'string') {
+      toast(t, 'error')
+      continue
+    }
+    monaco.editor.defineTheme(t.name, monacoTheme(t))
+    list.push(t)
+  }
+  setUserThemes(list)
+  applied = ''
+  applyTheme()
 }

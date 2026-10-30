@@ -70,7 +70,26 @@ highlighted command.
 
 Settings (theme, Vim on/off, line numbers, font, centered width, the path to `oc`, recent
 connections) are saved in the user config folder (`~/Library/Application Support/monomyth`
-on macOS, `%AppData%\monomyth` on Windows).
+on macOS, `%AppData%\monomyth` on Windows, `~/.config/monomyth` on Linux and WSL).
+
+Your own themes go in a `themes` folder there, one JSON file each, and are listed first in
+`Themes` (which re-reads the folder each time it opens). The name is the file's unless the
+file gives a `name`; one with a built-in theme's name replaces it. Every color is `#rrggbb`:
+
+```json
+{
+  "name": "darq",
+  "bg": "#151515",        "dark": "#1e1e1e",   "raised": "#252525", "selection": "#1e334f",
+  "fg": "#f1f2f4",        "dim": "#8f9299",
+  "red": "#e94646",       "green": "#11c965",  "yellow": "#f7b750", "orange": "#f7b750",
+  "blue": "#6da6f5",      "purple": "#b699eb", "cyan": "#71d0d5"
+}
+```
+
+`bg` is the background, `dark` floating windows and popups, `raised` the cursor line and
+selected tab, `selection` selected text, `fg` text, `dim` comments and muted text; the rest
+color code (`orange` numbers and constants, `purple` keywords, `blue` functions, `green`
+strings, `cyan` types). The folder can be a link to one kept elsewhere, like a dotfiles repo.
 
 If the connection drops, the app reconnects once by itself and otherwise shows a Reconnect
 button; open files and unsaved changes stay, and terminals start a new shell when typed in.

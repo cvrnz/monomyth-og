@@ -27,6 +27,7 @@ app.localAgent = flags.agent
 const methods: Record<string, (args: any[]) => unknown> = {
   Settings: () => app.Settings(),
   SaveSettings: ([data]) => app.SaveSettings(data),
+  Themes: () => app.Themes(),
   Platform: () => app.Platform(),
   OcProjects: () => app.OcProjects(),
   OcPods: ([project]) => app.OcPods(String(project ?? '')),
