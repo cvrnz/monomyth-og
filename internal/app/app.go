@@ -49,6 +49,30 @@ func (a *App) Settings() string {
 	return string(data)
 }
 
+type UserTheme struct {
+	File string `json:"file"`
+	Text string `json:"text"`
+}
+
+// Themes returns the user's own themes: the .json files in the themes folder next to the
+// settings (the window checks their contents). No folder means none.
+func (a *App) Themes() []UserTheme {
+	dir := filepath.Join(filepath.Dir(a.SettingsPath), "themes")
+	entries, _ := os.ReadDir(dir)
+	out := []UserTheme{}
+	for _, e := range entries {
+		if !strings.EqualFold(filepath.Ext(e.Name()), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil || len(data) == 0 {
+			continue
+		}
+		out = append(out, UserTheme{File: e.Name(), Text: string(data)})
+	}
+	return out
+}
+
 func (a *App) SaveSettings(data string) error {
 	if !json.Valid([]byte(data)) {
 		return errors.New("settings aren't valid JSON")

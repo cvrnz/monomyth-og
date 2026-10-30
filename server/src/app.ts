@@ -60,6 +60,16 @@ export class App {
     }
   }
 
+  // The user's own themes: the .json files in the themes folder next to the settings (the
+  // window checks their contents). No folder means none.
+  async Themes(): Promise<{ file: string; text: string }[]> {
+    const dir = path.join(path.dirname(this.settingsPath), 'themes')
+    const names = await fs.readdir(dir).catch(() => [] as string[])
+    const files = names.filter((n) => n.toLowerCase().endsWith('.json')).sort()
+    const out = await Promise.all(files.map(async (file) => ({ file, text: await fs.readFile(path.join(dir, file), 'utf8').catch(() => '') })))
+    return out.filter((t) => t.text)
+  }
+
   async SaveSettings(data: string) {
     if (typeof data !== 'string' || !isJSON(data)) throw new Error("settings aren't valid JSON")
     await fs.mkdir(path.dirname(this.settingsPath), { recursive: true })

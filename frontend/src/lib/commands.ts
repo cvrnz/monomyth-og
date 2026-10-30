@@ -5,7 +5,7 @@ import * as A from './actions'
 import { disconnect, newProject, reconnect } from './connection'
 import { prompt, toast } from './dialogs'
 import { pane } from './panes'
-import { updateSettings } from './settings'
+import { loadUserThemes, updateSettings } from './settings'
 import * as S from './store'
 
 export type Command = {
@@ -40,7 +40,7 @@ function setNumber(name: string, key: 'maxColumns' | 'fontSize', min: number, ma
 }
 
 export const commands: Command[] = [
-  { name: 'Themes', desc: 'Pick a theme', run: () => S.set({ palette: { mode: 'themes' } }) },
+  { name: 'Themes', desc: 'Pick a theme', run: () => loadUserThemes().then(() => S.set({ palette: { mode: 'themes' } })) },
   {
     name: 'ToggleLineNumbers',
     desc: 'Show or hide line numbers in files and diffs',

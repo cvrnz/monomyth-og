@@ -77,7 +77,34 @@ export const themes: Palette[] = [
 ]
 
 export function themeNamed(name: string | undefined): Palette {
-  return themes.find((t) => t.name === name) ?? themes[0]
+  return themes.find((t) => t.name === name) ?? builtins[0]
+}
+
+const builtins = themes.slice()
+const colorKeys = ['bg', 'dark', 'raised', 'selection', 'fg', 'dim', 'red', 'green', 'yellow', 'orange', 'blue', 'purple', 'cyan'] as const
+
+// A theme file of the user's: a palette as JSON, every color as #rrggbb. The name is the
+// file's unless it gives one. Returns what's wrong with it otherwise.
+export function parseTheme(file: string, text: string): Palette | string {
+  let data: unknown
+  try {
+    data = JSON.parse(text)
+  } catch {
+    return `${file} isn't valid JSON`
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return `${file} isn't a theme`
+  const d = data as Record<string, unknown>
+  const bad = colorKeys.filter((k) => typeof d[k] !== 'string' || !/^#[0-9a-f]{6}$/i.test(d[k]))
+  if (bad.length) return `${file}: ${bad.join(', ')} must be colors like #1a2b3c`
+  const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim() : file.replace(/\.json$/i, '')
+  const colors = Object.fromEntries(colorKeys.map((k) => [k, (d[k] as string).toLowerCase()]))
+  return { name, ...colors } as Palette
+}
+
+// The user's themes come first; one with a built-in theme's name takes its place.
+export function setUserThemes(list: Palette[]) {
+  const names = new Set(list.map((t) => t.name))
+  themes.splice(0, themes.length, ...list, ...builtins.filter((t) => !names.has(t.name)))
 }
 
 function mix(a: string, b: string, amount: number): string {
