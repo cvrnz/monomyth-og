@@ -23,9 +23,9 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 8000 },
   server: {
     host: '127.0.0.1',
-    port: Number(process.env.WAILS_VITE_PORT) || 9245,
+    port: 9245,
     strictPort: true,
-    // For working on the UI in a browser: server/ answers what the Wails runtime would.
+    // The backend: the Node server in server/.
     proxy: { '/api': { target: 'http://127.0.0.1:34115', changeOrigin: true } },
     // Under WSL, changes to files on a Windows drive (/mnt/c/...) send no file events.
     watch: process.env.WSL_DISTRO_NAME && modules.startsWith('/mnt/') ? { usePolling: true, interval: 300 } : undefined,

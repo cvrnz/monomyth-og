@@ -1,8 +1,8 @@
 //go:build linux
 
-// The agent binary runs inside the container, started by the app over `oc exec -i`. It reads
+// The agent binary runs inside the container, started by the Node server over `oc exec -i`. It reads
 // requests from stdin and writes responses and events to stdout (see internal/agent), and
-// exits when stdin closes, which is what happens when the app disconnects.
+// exits when stdin closes, which is what happens when the server disconnects.
 package main
 
 import (

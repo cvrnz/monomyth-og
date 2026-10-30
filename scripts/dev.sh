@@ -17,7 +17,7 @@ done
 [ -d server/node_modules ] || pnpm --dir server install
 
 # Containers need the Go agent (built once, uploaded to the pod); local folders don't.
-if [ ! -f internal/remote/agentbin/agent-linux-amd64 ]; then
+if [ ! -f agent/bin/agent-linux-amd64 ]; then
   if command -v go >/dev/null; then
     go run ./scripts/buildagent
   else

@@ -1,6 +1,6 @@
 // Containers through the OpenShift CLI: listing projects and pods, uploading the agent (the Go
-// binary built into internal/remote/agentbin by `go run ./scripts/buildagent`) and talking
-// to it over `oc exec`'s stdin and stdout. See internal/remote, which the desktop app uses.
+// binary built into agent/bin by `go run ./scripts/buildagent`) and talking to it over
+// `oc exec`'s stdin and stdout.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync, statSync } from 'node:fs'
@@ -10,7 +10,7 @@ import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import { isWindows, lookPath, run } from './wire.ts'
 
-const agentDir = fileURLToPath(new URL('../../internal/remote/agentbin/', import.meta.url))
+const agentDir = fileURLToPath(new URL('../../agent/bin/', import.meta.url))
 
 // The agent for a container architecture (as `uname -m` prints it), and a short hash of it
 // that names the uploaded copy, so a new build is uploaded once and reused after.

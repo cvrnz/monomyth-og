@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import ConnectScreen from './components/ConnectScreen'
 import Dialogs from './components/Dialogs'
 import Workspace from './components/Workspace'
-import { dirtyCount, quit } from './lib/actions'
-import { inWails, invoke, on } from './lib/bridge'
+import { dirtyCount } from './lib/actions'
 import { installKeys } from './lib/keys'
 import { restoreSession } from './lib/session'
 import { applyTheme, loadSettings } from './lib/settings'
@@ -28,28 +27,16 @@ export default function App() {
     })
     const unsubTheme = S.subscribe(applyTheme)
     const uninstallKeys = installKeys()
-    // The window asks before closing while anything is unsaved.
-    let dirty = false
-    const unsubDirty = S.subscribe(() => {
-      const now = dirtyCount(true) > 0
-      if (now !== dirty) {
-        dirty = now
-        invoke('SetDirty', now).catch(() => {})
-      }
-    })
-    const offQuit = on('app:quit-requested', () => quit())
-    // In a browser, closing the tab asks the same way.
+    // Closing the window asks first while anything is unsaved.
     const beforeUnload = (e: BeforeUnloadEvent) => {
-      if (dirty) e.preventDefault()
+      if (dirtyCount(true) > 0) e.preventDefault()
     }
-    if (!inWails) window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('beforeunload', beforeUnload)
     return () => {
       live = false
       stopSession()
       unsubTheme()
       uninstallKeys()
-      unsubDirty()
-      offQuit()
       window.removeEventListener('beforeunload', beforeUnload)
     }
   }, [])
