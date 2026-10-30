@@ -58,6 +58,7 @@ export const commands: Command[] = [
   {
     name: 'Sql',
     desc: 'Query a database in a new tab (PostgreSQL, MySQL, SQL Server, SQLite)',
+    keys: 'D',
     aliases: ['SQL', 'Database', 'DB', 'sql', 'db'],
     run: (args) => A.openSql(args.trim() || undefined),
   },

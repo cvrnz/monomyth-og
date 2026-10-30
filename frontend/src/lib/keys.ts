@@ -21,6 +21,7 @@ const bindings: Binding[] = [
   { code: 'KeyG', run: () => A.openScm() },
   { code: 'KeyE', run: () => A.openExplorer() },
   { code: 'KeyT', run: () => A.openTerminal() },
+  { code: 'KeyD', run: () => A.openSql() },
   { code: 'Backslash', run: () => A.splitTerminal('below') },
   { code: 'Backslash', shift: true, run: () => A.splitTerminal('right') },
   { code: 'KeyH', run: () => A.cycleTab(-1) },

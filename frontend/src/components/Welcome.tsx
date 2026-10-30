@@ -125,6 +125,7 @@ export default function Welcome({ id, active }: { id: string; active: boolean })
       ['Explorer', keyLabel('E')],
       ['Find files and text', keyLabel('F')],
       ['Terminal', keyLabel('T')],
+      ['SQL', keyLabel('D')],
       ['Split terminal', keyLabel('\\')],
       ['New tab', keyLabel('N')],
       ['Switch tabs', `${keyLabel('H')}  ${keyLabel('L')}`],
