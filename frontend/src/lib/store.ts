@@ -40,7 +40,7 @@ export const defaultSettings: Settings = {
   vim: true,
   lineNumbers: true,
   maxColumns: 120,
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: '"JetBrainsMono Nerd Font", "JetBrains Mono", "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
   recents: [],
 }

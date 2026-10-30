@@ -7,9 +7,9 @@
 :root {
   --mono: ui-monospace, Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --row: 22px;
+  --row: 27px;
   /* The tab bar and status bar, and how far they keep from the window's edges. */
-  --bar: 30px;
+  --bar: 36px;
   --edge: 20px;
 }
 
@@ -22,7 +22,7 @@ body,
   background: var(--bg, #282c34);
   color: var(--fg, #abb2bf);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -590,7 +590,7 @@ body,
   padding: 56px 0 40px;
 }
 .connect h1 {
-  font-size: 22px;
+  font-size: 27px;
   font-weight: 600;
   margin: 0 0 4px;
   color: var(--fg);
@@ -600,7 +600,7 @@ body,
   margin-bottom: 28px;
 }
 .connect h2 {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -609,7 +609,7 @@ body,
 }
 .connect .label {
   color: var(--dim);
-  font-size: 12px;
+  font-size: 14px;
   margin: 14px 0 6px;
 }
 .pick-list {
@@ -639,14 +639,14 @@ body,
 .pick .name {
   color: var(--fg);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 15px;
   white-space: nowrap;
   flex: none;
 }
 .pick .meta {
   color: var(--dim);
   margin-left: auto;
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -668,7 +668,7 @@ body,
   color: var(--red);
   white-space: pre-wrap;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 14px;
   background: color-mix(in srgb, var(--red) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
   border-radius: 8px;
@@ -689,7 +689,7 @@ body,
 }
 .connect .field label {
   color: var(--dim);
-  font-size: 12px;
+  font-size: 14px;
 }
 .connect .text-input {
   background: var(--raised);
@@ -697,7 +697,7 @@ body,
   color: var(--fg);
   border-radius: 8px;
   padding: 7px 10px;
-  font: 12.5px var(--mono);
+  font: 15px var(--mono);
   outline: none;
 }
 .connect .text-input:focus {
@@ -716,7 +716,7 @@ body,
 }
 .connect .help {
   color: var(--dim);
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 8px;
   line-height: 1.6;
 }
@@ -775,7 +775,7 @@ body,
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   white-space: pre-wrap;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 14px;
   user-select: text;
   cursor: default;
 }
@@ -793,7 +793,7 @@ body,
   color: var(--fg);
   border-radius: 8px;
   padding: 7px 10px;
-  font: 13px var(--mono);
+  font: 16px var(--mono);
   outline: none;
 }
 .dialog-input:focus {
