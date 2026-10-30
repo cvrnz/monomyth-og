@@ -84,9 +84,11 @@ build needs a Mac (or `wails3 task setup:docker` for cross-compiling).
 
 `wails3 dev` runs the app with hot reload.
 
-Or run it in a browser, with no exe: a Node server (`server/`, the app's service over HTTP on
-:34115) and Vite (http://127.0.0.1:9245). Needs Node 22.18+ and pnpm; one command starts both
-(Ctrl+C stops them). In Git Bash (or on macOS/Linux):
+Or run it with no exe of its own: a Node server (`server/`, the app's service over HTTP on
+:34115), Vite (http://127.0.0.1:9245), and an app window (Edge or Chrome with `--app`, on its
+own profile; no tabs or address bar). Needs Node 22.18+ and pnpm. Closing the window (or
+Ctrl+C) stops everything; `--browser` / `-Browser` skips the window. In Git Bash (or on
+macOS/Linux):
 
 ```sh
 ./scripts/dev.sh
