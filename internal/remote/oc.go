@@ -242,8 +242,3 @@ func (o Oc) Connect(t Target, status func(string), onEvent func(string, json.Raw
 	}
 	return Start(cmd, onEvent, onClose)
 }
-
-// Local starts an agent binary on this machine, for developing the app without a cluster.
-func Local(agentPath string, onEvent func(string, json.RawMessage), onClose func(error)) (*Client, error) {
-	return Start(exec.Command(agentPath), onEvent, onClose)
-}

@@ -84,18 +84,26 @@ build needs a Mac (or `wails3 task setup:docker` for cross-compiling).
 
 `wails3 dev` runs the app with hot reload.
 
-The UI can also be worked on in a plain browser, without Wails:
+Or run it in a browser, with no exe: a Node server (`server/`, the app's service over HTTP on
+:34115) and Vite (http://127.0.0.1:9245). Needs Node 22.18+ and pnpm; one command starts both
+(Ctrl+C stops them). In Git Bash (or on macOS/Linux):
 
 ```sh
-go run ./cmd/devserver          # serves the app's methods on :34115
-cd frontend && pnpm dev         # http://127.0.0.1:9245
+./scripts/dev.sh
 ```
 
-"This computer" works there as in the app (type the folder's path; there's no picker). To try
-the container path without a cluster, on Linux, run the agent binary as a pretend pod:
-`go build -o /tmp/editor-agent ./agent && go run ./cmd/devserver -agent /tmp/editor-agent`.
+In PowerShell:
 
-Checks: `go vet ./agent ./internal/... ./cmd/...`, `cd frontend && pnpm build && pnpm lint`.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
+```
+
+"This computer" works there as in the app, including the folder picker. Connecting to a
+container uploads the Go agent from `internal/remote/agentbin/`, so build it once with
+`go run ./scripts/buildagent` (the scripts do this when Go is installed).
+
+Checks: `go vet ./agent ./internal/...`, `cd frontend && pnpm build && pnpm lint`,
+`cd server && pnpm typecheck && pnpm test`.
 
 ## Layout
 
@@ -107,6 +115,9 @@ Checks: `go vet ./agent ./internal/... ./cmd/...`, `cd frontend && pnpm build &&
   stdin/stdout. On this computer the app runs `internal/agent` in-process instead.
 - `internal/proto` — the wire format. `internal/remote` — finding `oc`, listing projects and
   pods, uploading and starting the agent. `internal/app` — the service the window calls.
-- `main.go` — the Wails app and window. `cmd/devserver` — the same service over HTTP.
-- `frontend/src/lib` — the bridge to Go, app state, actions, commands, shortcuts, themes.
+- `main.go` — the Wails app and window.
+- `server/` — the same service in Node (TypeScript run directly by Node, no build), for the
+  browser: `src/local` ports `internal/agent` for this computer (terminals on node-pty) and
+  `src/remote.ts` connects to containers with `oc` and the Go agent.
+- `frontend/src/lib` — the bridge to the backend, app state, actions, commands, shortcuts, themes.
   `frontend/src/components` — the screens and panes.
