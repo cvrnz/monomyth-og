@@ -34,9 +34,12 @@ function openSearch() {
   if (s.search) A.focusActive()
 }
 
-// Where the key went: a terminal, or an editor in Vim's insert mode.
+// Where the key went: a terminal taking input (not in its normal mode), or an editor in Vim's
+// insert mode.
 function inTerminal(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest('.xterm'))
+  if (!(target instanceof Element && target.closest('.xterm'))) return false
+  const tab = S.activeTab()
+  return pane(tab && S.focusedPane(tab))?.shellInput?.() ?? true
 }
 
 function inVimInsert() {
