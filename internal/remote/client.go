@@ -14,9 +14,11 @@ import (
 	"editor/internal/proto"
 )
 
-// Client talks to a running agent over its stdin and stdout.
+// Client talks to a running agent: a process over its stdin and stdout, or one running in
+// this process.
 type Client struct {
-	cmd     *exec.Cmd
+	wait    func() error // until the agent has stopped
+	kill    func()       // when it won't stop by itself
 	stdin   io.WriteCloser
 	writeMu sync.Mutex
 
@@ -57,7 +59,7 @@ func (t *tail) String() string {
 // Start runs the command (which starts the agent) and connects to it. onEvent receives the
 // agent's events; onClose is called once when the connection ends, with why.
 func Start(cmd *exec.Cmd, onEvent func(string, json.RawMessage), onClose func(error)) (*Client, error) {
-	c := &Client{cmd: cmd, pending: map[int64]chan proto.Message{}, done: make(chan struct{}), OnEvent: onEvent}
+	c := newClient(onEvent)
 	hideWindow(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -72,41 +74,72 @@ func Start(cmd *exec.Cmd, onEvent func(string, json.RawMessage), onClose func(er
 		return nil, err
 	}
 	c.stdin = stdin
-
-	go func() {
-		in := bufio.NewReaderSize(stdout, 256*1024)
-		for {
-			line, err := in.ReadBytes('\n')
-			if len(line) > 0 {
-				var msg proto.Message
-				if json.Unmarshal(line, &msg) == nil {
-					c.dispatch(msg)
-				}
-			}
-			if err != nil {
-				break
-			}
+	c.wait = cmd.Wait
+	c.kill = func() {
+		if cmd.Process != nil {
+			cmd.Process.Kill()
 		}
-		waitErr := cmd.Wait()
-		reason := errors.New("disconnected")
-		if msg := c.stderr.String(); msg != "" {
-			reason = errors.New(lastLines(msg, 3))
-		} else if waitErr != nil {
-			reason = waitErr
-		}
-		c.mu.Lock()
-		c.closed, c.err = true, reason
-		for id, ch := range c.pending {
-			ch <- proto.Message{ID: id, Error: reason.Error()}
-			delete(c.pending, id)
-		}
-		c.mu.Unlock()
-		close(c.done)
-		if onClose != nil {
-			onClose(reason)
-		}
-	}()
+	}
+	go c.read(stdout, onClose)
 	return c, nil
+}
+
+// InProcess runs an agent in this process (serve, given its input and output), for editing
+// this computer's files.
+func InProcess(serve func(in io.Reader, out io.Writer) error, onEvent func(string, json.RawMessage), onClose func(error)) *Client {
+	c := newClient(onEvent)
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	c.stdin = inW
+	result := make(chan error, 1)
+	go func() {
+		err := serve(inR, outW)
+		outW.Close()
+		result <- err
+	}()
+	c.wait = func() error { return <-result }
+	c.kill = func() { inR.Close() }
+	go c.read(outR, onClose)
+	return c
+}
+
+func newClient(onEvent func(string, json.RawMessage)) *Client {
+	return &Client{pending: map[int64]chan proto.Message{}, done: make(chan struct{}), OnEvent: onEvent}
+}
+
+// Reads the agent's messages until it stops, then fails whatever was still waiting.
+func (c *Client) read(stdout io.Reader, onClose func(error)) {
+	in := bufio.NewReaderSize(stdout, 256*1024)
+	for {
+		line, err := in.ReadBytes('\n')
+		if len(line) > 0 {
+			var msg proto.Message
+			if json.Unmarshal(line, &msg) == nil {
+				c.dispatch(msg)
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	waitErr := c.wait()
+	reason := errors.New("disconnected")
+	if msg := c.stderr.String(); msg != "" {
+		reason = errors.New(lastLines(msg, 3))
+	} else if waitErr != nil {
+		reason = waitErr
+	}
+	c.mu.Lock()
+	c.closed, c.err = true, reason
+	for id, ch := range c.pending {
+		ch <- proto.Message{ID: id, Error: reason.Error()}
+		delete(c.pending, id)
+	}
+	c.mu.Unlock()
+	close(c.done)
+	if onClose != nil {
+		onClose(reason)
+	}
 }
 
 func lastLines(s string, n int) string {
@@ -179,9 +212,7 @@ func (c *Client) Close() {
 	select {
 	case <-c.done:
 	case <-time.After(3 * time.Second):
-		if c.cmd.Process != nil {
-			c.cmd.Process.Kill()
-		}
+		c.kill()
 	}
 }
 

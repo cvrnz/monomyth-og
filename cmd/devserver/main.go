@@ -1,5 +1,11 @@
 // Serves the app's methods over HTTP so the UI can run in a plain browser (with `pnpm dev`,
-// which proxies /api here), against an agent on this machine instead of a cluster:
+// which proxies /api here):
+//
+//	go run ./cmd/devserver
+//
+// "This computer" works as in the app. Projects and pods come from oc, or, with -agent, there's
+// one pretend pod that runs that agent binary on this machine (to try the container path
+// without a cluster):
 //
 //	go build -o /tmp/editor-agent ./agent && go run ./cmd/devserver -agent /tmp/editor-agent
 //
@@ -23,12 +29,9 @@ import (
 )
 
 func main() {
-	agent := flag.String("agent", "", "agent binary to run (required)")
+	agent := flag.String("agent", "", "agent binary to run as a pretend pod (optional)")
 	addr := flag.String("addr", "127.0.0.1:34115", "address to listen on")
 	flag.Parse()
-	if *agent == "" {
-		log.Fatal("-agent is required")
-	}
 
 	a := app.New()
 	a.LocalAgent = *agent
@@ -103,6 +106,8 @@ func main() {
 			var t remote.Target
 			arg(0, &t)
 			err = a.Connect(t)
+		case "PickFolder":
+			result, err = a.PickFolder()
 		case "Disconnect":
 			a.Disconnect()
 		case "Call":

@@ -65,6 +65,16 @@ func main() {
 	})
 
 	a.Emit = func(event string, data any) { wails.Event.Emit(event, data) }
+	a.PickFolderFn = func() (string, error) {
+		return wails.Dialog.OpenFile().
+			SetTitle("Open folder").
+			SetButtonText("Open").
+			CanChooseDirectories(true).
+			CanChooseFiles(false).
+			CanCreateDirectories(true).
+			AttachToWindow(win).
+			PromptForSingleSelection()
+	}
 	a.QuitFn = wails.Quit
 
 	if err := wails.Run(); err != nil {

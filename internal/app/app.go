@@ -9,8 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 
+	"editor/internal/agent"
 	"editor/internal/remote"
 )
 
@@ -19,6 +22,8 @@ type App struct {
 	Emit func(event string, data any)
 	// QuitFn closes the window for real (after the user has said to discard unsaved changes).
 	QuitFn func()
+	// PickFolderFn shows the system's folder picker; nil where there's none (the devserver).
+	PickFolderFn func() (string, error)
 	// LocalAgent, when set, is an agent binary to run on this machine instead of connecting to
 	// a cluster (for development).
 	LocalAgent   string
@@ -111,7 +116,11 @@ func (a *App) Connect(t remote.Target) error {
 	status := func(s string) { a.Emit("agent:status", s) }
 
 	var err error
-	if a.LocalAgent != "" {
+	if t.Local {
+		status("Opening…")
+		toolsOnPath()
+		mine = remote.InProcess(agent.Serve, onEvent, onClose)
+	} else if a.LocalAgent != "" {
 		status("Starting…")
 		mine, err = remote.Local(a.LocalAgent, onEvent, onClose)
 	} else {
@@ -126,6 +135,32 @@ func (a *App) Connect(t remote.Target) error {
 	a.mu.Unlock()
 	close(ready)
 	return nil
+}
+
+// PickFolder asks for a folder on this computer, with the system's picker. An empty result
+// means it was cancelled.
+func (a *App) PickFolder() (string, error) {
+	if a.PickFolderFn == nil {
+		return "", errors.New("there's no folder picker here; type the folder's path")
+	}
+	dir, err := a.PickFolderFn()
+	return filepath.ToSlash(dir), err
+}
+
+// Apps started from the Finder get a bare PATH (/usr/bin:/bin:...), without Homebrew's git or
+// ripgrep. Shells are fine either way: they're login shells and read the user's profile.
+func toolsOnPath() {
+	if runtime.GOOS != "darwin" {
+		return
+	}
+	home, _ := os.UserHomeDir()
+	path := filepath.SplitList(os.Getenv("PATH"))
+	for _, dir := range []string{"/opt/homebrew/bin", "/usr/local/bin", filepath.Join(home, ".local", "bin")} {
+		if !slices.Contains(path, dir) {
+			path = append(path, dir)
+		}
+	}
+	os.Setenv("PATH", strings.Join(path, string(os.PathListSeparator)))
 }
 
 func (a *App) Disconnect() {

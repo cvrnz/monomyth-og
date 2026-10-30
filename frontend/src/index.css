@@ -474,6 +474,11 @@ body,
   color: var(--dim);
   margin: 24px 0 8px;
 }
+.connect .label {
+  color: var(--dim);
+  font-size: 12px;
+  margin: 14px 0 6px;
+}
 .pick-list {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -502,12 +507,20 @@ body,
   color: var(--fg);
   font-family: var(--mono);
   font-size: 12.5px;
+  white-space: nowrap;
+  flex: none;
 }
 .pick .meta {
   color: var(--dim);
   margin-left: auto;
   font-size: 12px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.pick .x {
+  flex: none;
 }
 .pick .x {
   color: var(--dim);

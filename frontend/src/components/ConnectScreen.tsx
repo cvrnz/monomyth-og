@@ -1,8 +1,10 @@
-// Picking a container to work in: a recent one, or a project, pod and container from `oc`.
+// Picking where to work: a recent place, a folder on this computer, or a project, pod and
+// container from `oc`.
 import { Button, Spinner } from '@heroui/react'
 import { useCallback, useEffect, useState } from 'react'
 import { errorText, invoke } from '../lib/bridge'
 import { connect, forget } from '../lib/connection'
+import { basename } from '../lib/paths'
 import { updateSettings } from '../lib/settings'
 import * as S from '../lib/store'
 
@@ -14,7 +16,11 @@ function defaultContainer(containers: string[]): string {
 }
 
 function describe(t: S.Target) {
-  return t.workspace || t.pod
+  return t.local ? basename(t.folder) : t.workspace || t.pod
+}
+
+function details(t: S.Target) {
+  return t.local ? `this computer · ${t.folder}` : `${t.project} · ${t.container} · ${t.folder || '~'}`
 }
 
 export default function ConnectScreen() {
@@ -28,18 +34,22 @@ export default function ConnectScreen() {
   const [pod, setPod] = useState<Pod | null>(null)
   const [container, setContainer] = useState('')
   const [folder, setFolder] = useState('')
+  const [localFolder, setLocalFolder] = useState('')
+  const [ocError, setOcError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState('')
   const [ocDraft, setOcDraft] = useState(ocPath)
 
   const busy = conn.state === 'connecting'
   const shownError = error || (conn.state === 'idle' ? (conn.error ?? '') : '')
+  // No oc at all is normal for someone editing local files only: not an error.
+  const noOc = /couldn't find the oc command/.test(ocError)
 
   const loadPods = useCallback(async (p: string) => {
     setProject(p)
     setPods(null)
     setPod(null)
-    setError('')
+    setOcError('')
     setLoading('Loading pods…')
     try {
       const list = await invoke<Pod[]>('OcPods', p)
@@ -50,14 +60,14 @@ export default function ConnectScreen() {
         setContainer(defaultContainer(first.containers))
       }
     } catch (err) {
-      setError(errorText(err))
+      setOcError(errorText(err))
     } finally {
       setLoading('')
     }
   }, [])
 
   const loadProjects = useCallback(async () => {
-    setError('')
+    setOcError('')
     setProjects(null)
     setLoading('Loading projects…')
     try {
@@ -71,7 +81,7 @@ export default function ConnectScreen() {
     } catch (err) {
       setProjects([])
       setLoading('')
-      setError(errorText(err))
+      setOcError(errorText(err))
     }
   }, [loadPods])
 
@@ -81,7 +91,31 @@ export default function ConnectScreen() {
 
   const go = () => {
     if (!pod || busy) return
+    setError('')
     connect({ project, pod: pod.name, workspace: pod.workspace, container, folder: folder.trim() })
+  }
+
+  const openLocal = (path: string) => {
+    const dir = path.trim()
+    if (busy) return
+    if (!dir) {
+      setError('Pick a folder, or type its path.')
+      return
+    }
+    setError('')
+    connect(S.localTarget(dir))
+  }
+
+  const browse = async () => {
+    try {
+      const dir = await invoke<string>('PickFolder')
+      if (dir) {
+        setLocalFolder(dir)
+        openLocal(dir)
+      }
+    } catch (err) {
+      setError(errorText(err))
+    }
   }
 
   // A recent workspace's pod gets a new name when the workspace restarts; find it again.
@@ -89,7 +123,7 @@ export default function ConnectScreen() {
     if (busy) return
     setError('')
     let target = t
-    if (t.workspace) {
+    if (t.workspace && !t.local) {
       try {
         setLoading(`Finding ${t.workspace}…`)
         const list = await invoke<Pod[]>('OcPods', t.project)
@@ -109,22 +143,39 @@ export default function ConnectScreen() {
     connect(target)
   }
 
+  const onEnter = (fn: () => void) => (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      fn()
+    }
+  }
+
   return (
-    <div className="connect" onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON' && go()}>
+    <div className="connect">
       <div className="connect-inner">
         <h1>Editor</h1>
-        <div className="sub">Edit files in an OpenShift or Dev Spaces container.</div>
+        <div className="sub">Edit files on this computer, or in an OpenShift or Dev Spaces container.</div>
+
+        {busy && (
+          <div className="status">
+            <Spinner size="sm" /> {conn.status}
+          </div>
+        )}
+        {!busy && loading && projects !== null && pods !== null && (
+          <div className="status">
+            <Spinner size="sm" /> {loading}
+          </div>
+        )}
+        {shownError && <div className="error">{shownError}</div>}
 
         {recents.length > 0 && (
           <>
             <h2>Recent</h2>
             <div className="pick-list">
               {recents.map((t) => (
-                <div key={`${t.project}/${describe(t)}/${t.container}/${t.folder}`} className="pick" onClick={() => openRecent(t)}>
+                <div key={`${t.local ? 'local' : t.project}/${describe(t)}/${t.container}/${t.folder}`} className="pick" onClick={() => openRecent(t)}>
                   <span className="name">{describe(t)}</span>
-                  <span className="meta">
-                    {t.project} · {t.container} · {t.folder || '~'}
-                  </span>
+                  <span className="meta">{details(t)}</span>
                   <span
                     className="x"
                     title="Forget"
@@ -141,26 +192,56 @@ export default function ConnectScreen() {
           </>
         )}
 
-        <h2>Project</h2>
+        <h2>This computer</h2>
+        <div className="row-fields">
+          <div className="field">
+            <input
+              className="text-input"
+              placeholder="A folder's path, or choose one"
+              value={localFolder}
+              spellCheck={false}
+              onChange={(e) => setLocalFolder(e.target.value)}
+              onKeyDown={onEnter(() => openLocal(localFolder))}
+            />
+          </div>
+          <Button variant="secondary" isDisabled={busy} onPress={browse}>
+            Choose…
+          </Button>
+          <Button variant="primary" isDisabled={busy || !localFolder.trim()} onPress={() => openLocal(localFolder)}>
+            Open
+          </Button>
+        </div>
+
+        <h2>OpenShift</h2>
         {projects === null ? (
           <div className="status">
             <Spinner size="sm" /> {loading}
           </div>
-        ) : projects.length === 0 ? (
-          <div className="help">No projects. Log in with <code>oc login</code> in a terminal, then refresh.</div>
-        ) : (
-          <div className="pick-list">
-            {projects.map((p) => (
-              <div key={p} className={`pick ${p === project ? 'on' : ''}`} onClick={() => loadPods(p)}>
-                <span className="name">{p}</span>
-              </div>
-            ))}
+        ) : noOc ? (
+          <div className="help">
+            To edit files in a container, install the <code>oc</code> command and log in with <code>oc login</code>, or set its path below.
           </div>
-        )}
-
-        {project && (
+        ) : projects.length === 0 ? (
+          <div className="help">
+            No projects. Log in with <code>oc login</code> in a terminal, then refresh.
+          </div>
+        ) : (
           <>
-            <h2>Pod</h2>
+            <div className="label">Project</div>
+            <div className="pick-list">
+              {projects.map((p) => (
+                <div key={p} className={`pick ${p === project ? 'on' : ''}`} onClick={() => loadPods(p)}>
+                  <span className="name">{p}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {ocError && !noOc && <div className="error">{ocError}</div>}
+
+        {project && projects && projects.length > 0 && (
+          <>
+            <div className="label">Pod</div>
             {pods === null ? (
               loading && (
                 <div className="status">
@@ -197,7 +278,7 @@ export default function ConnectScreen() {
           <>
             {pod.containers.length > 1 && (
               <>
-                <h2>Container</h2>
+                <div className="label">Container</div>
                 <div className="pick-list">
                   {pod.containers.map((c) => (
                     <div key={c} className={`pick ${c === container ? 'on' : ''}`} onClick={() => setContainer(c)} onDoubleClick={go}>
@@ -207,7 +288,7 @@ export default function ConnectScreen() {
                 </div>
               </>
             )}
-            <h2>Folder</h2>
+            <div className="label">Folder</div>
             <div className="row-fields">
               <div className="field">
                 <input
@@ -216,6 +297,7 @@ export default function ConnectScreen() {
                   value={folder}
                   spellCheck={false}
                   onChange={(e) => setFolder(e.target.value)}
+                  onKeyDown={onEnter(go)}
                 />
               </div>
               <Button variant="primary" isDisabled={busy || !pod} onPress={go}>
@@ -224,18 +306,6 @@ export default function ConnectScreen() {
             </div>
           </>
         )}
-
-        {busy && (
-          <div className="status">
-            <Spinner size="sm" /> {conn.status}
-          </div>
-        )}
-        {!busy && loading && projects !== null && pods !== null && (
-          <div className="status">
-            <Spinner size="sm" /> {loading}
-          </div>
-        )}
-        {shownError && <div className="error">{shownError}</div>}
 
         <h2>Settings</h2>
         <div className="row-fields">
@@ -261,7 +331,7 @@ export default function ConnectScreen() {
           </Button>
         </div>
         <div className="help">
-          The app uses your <code>oc</code> login. If projects don't load, run <code>oc login</code> in a terminal first.
+          Containers are reached with your <code>oc</code> login. If projects don't load, run <code>oc login</code> in a terminal first.
         </div>
       </div>
     </div>

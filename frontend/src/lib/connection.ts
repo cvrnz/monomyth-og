@@ -29,6 +29,7 @@ function listen() {
 }
 
 function sameTarget(a: S.Target, b: S.Target) {
+  if (a.local || b.local) return Boolean(a.local && b.local) && a.folder === b.folder
   return a.project === b.project && a.container === b.container && a.folder === b.folder && (a.workspace ? a.workspace === b.workspace : a.pod === b.pod)
 }
 
