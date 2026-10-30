@@ -82,7 +82,7 @@ come after them.
   `R` refresh. Files open in a tab of their own. Files with uncommitted changes show in their Git
   status's color and letter (`M` modified, `U` untracked, `A` added, `R` renamed), and folders
   holding any with a dot.
-- **SQL** (the `Sql` command, or `Sql <saved connection>`): a tab connected to a PostgreSQL,
+- **SQL** (Cmd+D, the `Sql` command, or `Sql <saved connection>`): a tab connected to a PostgreSQL,
   MySQL/MariaDB, SQL Server or SQLite database. Queries run from this computer (not in the
   container), with the Node server (`scripts/dev.sh`). The left lists the saved connections
   (`a` new, `e` edit, `d` delete, Enter connect); connected, it lists the tables and views (by
