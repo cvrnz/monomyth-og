@@ -328,7 +328,8 @@ body,
   color: var(--dim);
   padding: 8px 2ch;
 }
-.explorer-help {
+.explorer-help,
+.scm-help {
   color: var(--dim);
   padding: 3px 1ch;
   border-top: 1px solid var(--separator);
@@ -338,38 +339,67 @@ body,
   flex: none;
 }
 
-/* Source control: Repos/Changes sidebar and a side-by-side diff. */
+/* Source control: Repos above Changes on the left, a side-by-side diff on the right. */
 .scm {
   display: flex;
+  flex-direction: column;
   height: 100%;
+}
+.scm-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 .scm-side {
   flex: none;
-  overflow: auto;
-  outline: none;
+  display: flex;
+  flex-direction: column;
   max-width: 50%;
+  min-width: 220px;
+  border-right: 1px solid var(--separator);
+  outline: none;
 }
-.scm-tabs {
-  white-space: pre;
-  height: var(--row);
-  line-height: var(--row);
+.scm-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-.scm-tabs span {
-  padding: 0 1ch;
+.scm-repos {
+  flex: none;
+  max-height: 40%;
+}
+.scm-changes {
+  flex: 1;
+  border-top: 1px solid var(--separator);
+}
+.scm-title {
   color: var(--dim);
+  padding: 4px 1ch 0;
+  height: var(--row);
+  flex: none;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: default;
 }
-.scm-tabs span.on {
+.scm-list.on .scm-title {
   color: var(--fg);
-  background: var(--raised);
-  font-weight: bold;
 }
-.scm-tabs span:not(.on):hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--raised) 60%, transparent);
+.scm-rows {
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 20%, transparent) transparent;
 }
 .scm-side .row.selected {
   background: var(--raised);
+}
+/* The other list keeps its place, shown faintly. */
+.scm-list:not(.on) .row.selected {
+  background: color-mix(in srgb, var(--raised) 55%, transparent);
+}
+.scm-repo {
+  color: var(--dim);
 }
 .scm-diff {
   flex: 1;
@@ -379,6 +409,7 @@ body,
 }
 .scm-labels {
   display: flex;
+  padding-top: 4px;
   height: var(--row);
   line-height: var(--row);
   color: var(--dim);
