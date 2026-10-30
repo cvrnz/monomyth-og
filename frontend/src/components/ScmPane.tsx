@@ -10,8 +10,10 @@ import { errorText } from '../lib/bridge'
 import { toast } from '../lib/dialogs'
 import { languageFor, monaco } from '../lib/monaco'
 import { register } from '../lib/panes'
+import { useParts } from '../lib/parts'
 import { isInside, join, pretty } from '../lib/paths'
 import * as S from '../lib/store'
+import Hints from './Hints'
 
 type Busy = { repo: string; verb: string; frame: number } | { repo: string; text: string; cls: string }
 type Row = { text: React.ReactNode; width: number; item?: { repo?: Repo; change?: Change; sync?: boolean } }
@@ -28,6 +30,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
   const [sel, setSel] = useState({ repos: 0, changes: 0 })
   const [busy, setBusy] = useState<Busy | null>(null)
   const side = useRef<HTMLDivElement>(null)
+  const { part, setPart, list: parts, current: currentPart, nav } = useParts('side')
   const diffHost = useRef<HTMLDivElement>(null)
   const diffRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const repoRef = useRef<Repo | null>(null)
@@ -229,7 +232,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
       stickyScroll: { enabled: false },
     })
     diffRef.current = diff
-    const unregister = register(id, { focus: () => side.current?.focus() })
+    const unregister = register(id, { focus: () => side.current?.focus(), ...nav })
     return () => {
       unregister()
       const m = diff.getModel()
@@ -237,7 +240,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
       m?.original.dispose()
       m?.modified.dispose()
     }
-  }, [id])
+  }, [id, nav])
 
   useEffect(() => {
     diffRef.current?.updateOptions({ fontSize: settings.fontSize, fontFamily: settings.fontFamily, lineNumbers: settings.lineNumbers ? 'on' : 'off' })
@@ -340,6 +343,20 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     e.preventDefault()
   }
 
+  // Repos, Changes, then the diff (Cmd+J/K); Tab also moves between the lists.
+  parts.current = [
+    { name: 'repos', focus: () => (setView('repos'), side.current?.focus()) },
+    { name: 'changes', focus: () => (setView('changes'), side.current?.focus()) },
+    ...(shownChange ? [{ name: 'diff', focus: () => diffRef.current?.getModifiedEditor().focus() }] : []),
+  ]
+  currentPart.current = part === 'diff' ? 'diff' : view
+  const hints =
+    part === 'diff'
+      ? ['↑/↓ scroll', 'select and copy text', 'Enter on the file in Changes opens it']
+      : view === 'repos'
+        ? ['j/k move', 'Enter show its changes', 'Tab Changes', 'R refresh']
+        : ['j/k move', entry?.sync ? 'Enter sync' : 'Enter open file', 'Tab Repos', 'R refresh']
+
   // Keep the selected rows in view.
   useEffect(() => {
     side.current?.querySelectorAll('.row.selected').forEach((r) => r.scrollIntoView({ block: 'nearest' }))
@@ -375,7 +392,14 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
   return (
     <div className="scm">
       <div className="scm-body">
-        <div className="scm-side" ref={side} tabIndex={0} onKeyDown={onKeyDown} style={{ width: `${sideWidth}ch` }}>
+        <div
+          className="scm-side"
+          ref={side}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          onFocus={() => setPart('side')}
+          style={{ width: `${sideWidth}ch` }}
+        >
           {list('repos', 'Repos', repoRows)}
           {list(
             'changes',
@@ -385,7 +409,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
             changeRows,
           )}
         </div>
-        <div className="scm-diff">
+        <div className="scm-diff" onFocus={() => setPart('diff')}>
           <div className="scm-labels">
             <div>{label(shownChange, 'old')}</div>
             <div>{label(shownChange, 'new')}</div>
@@ -395,7 +419,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
           </div>
         </div>
       </div>
-      <div className="scm-help">Tab switch list   Enter open   R refresh</div>
+      <Hints items={hints} />
     </div>
   )
 }

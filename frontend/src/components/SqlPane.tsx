@@ -15,10 +15,12 @@ import { copyText, errorText } from '../lib/bridge'
 import { confirm, toast } from '../lib/dialogs'
 import { monaco } from '../lib/monaco'
 import { register } from '../lib/panes'
+import { useParts } from '../lib/parts'
 import { updateSettings } from '../lib/settings'
 import * as sql from '../lib/sql'
 import * as S from '../lib/store'
 import { setupVim } from '../lib/vim'
+import Hints from './Hints'
 import SqlGrid from './SqlGrid'
 
 type Props = { tab: S.SqlTab; active: boolean }
@@ -483,10 +485,24 @@ export default function SqlPane({ tab, active }: Props) {
     })
   }, [active, loaded])
 
+  // The connections, the query, then the results; or the connections and the form (Cmd+J/K).
+  const { part, setPart, list: parts, nav } = useParts('side')
+  const results = useRef<HTMLDivElement>(null)
+  parts.current = [
+    { name: 'side', focus: () => side.current?.focus() },
+    ...(form
+      ? [{ name: 'form', focus: () => right.current?.querySelector<HTMLElement>('.sql-form input, .sql-form select')?.focus() }]
+      : [
+          { name: 'editor', focus: () => editorRef.current?.focus() },
+          { name: 'results', focus: () => results.current?.querySelector<HTMLElement>('.sql-grid, .sql-messages')?.focus() },
+        ]),
+  ]
+
   useEffect(() => register(tab.id, {
     focus: () => (infoRef.current ? editorRef.current?.focus() : side.current?.focus()),
     editor: editorRef.current ?? undefined,
-  }), [tab.id, loaded])
+    ...nav,
+  }), [tab.id, loaded, nav])
 
   // Dragging the line between the editor and the results.
   const drag = (e: React.MouseEvent) => {
@@ -566,9 +582,23 @@ export default function SqlPane({ tab, active }: Props) {
       ]
     : []
 
+  const hints =
+    part === 'form'
+      ? ['Enter connect', 'Tab next field', 'Esc cancel']
+      : part === 'editor'
+        ? [`${S.isMac() ? '⌘' : 'Ctrl+'}Enter run the selection, or everything`]
+        : part === 'results'
+          ? set?.columns.length
+            ? ['h/j/k/l move', 'g/G first/last row', '0/$ first/last column', 'y copy cell', 'Y copy row']
+            : ['↑/↓ scroll', 'select and copy text']
+          : info
+            ? ['j/k move', 'Enter first 100 rows', 'l/h expand/collapse', 'i insert name', 'y copy name', 'R refresh']
+            : ['j/k move', 'Enter connect', 'a new', 'e edit', 'd delete']
+
   return (
     <div className="sql">
-      <div className="sql-side" ref={side} tabIndex={0} onKeyDown={onSideKey}>
+      <div className="sql-body">
+      <div className="sql-side" ref={side} tabIndex={0} onKeyDown={onSideKey} onFocus={() => setPart('side')}>
         <div className="sql-title">
           {info ? (
             <>
@@ -612,14 +642,9 @@ export default function SqlPane({ tab, active }: Props) {
             </div>
           ))}
         </div>
-        <div className="sql-help">
-          {(info ? ['Enter rows', 'l/h expand', 'i insert', 'y copy', 'R refresh'] : ['Enter connect', 'a new', 'e edit', 'd delete'])
-            .map((h) => h.replace(' ', '\u00a0'))
-            .join('   ')}
-        </div>
       </div>
       <div className="sql-main" ref={right}>
-        <div className="sql-editor" style={{ height: `${split * 100}%` }}>
+        <div className="sql-editor" style={{ height: `${split * 100}%` }} onFocus={() => setPart('editor')}>
           <div className="sql-toolbar">
             <Button size="sm" variant="primary" isDisabled={!info || running} onPress={() => run()}>
               Run
@@ -635,7 +660,7 @@ export default function SqlPane({ tab, active }: Props) {
           <div ref={vimNode} className="vim-status sql-vim" />
         </div>
         <div className="sql-splitter" onMouseDown={drag} />
-        <div className="sql-results">
+        <div className="sql-results" ref={results} onFocus={() => setPart('results')}>
           {running && (
             <div className="sql-running">
               <Spinner size="sm" /> Running{ran ? ` ${ran}` : '…'}
@@ -660,7 +685,7 @@ export default function SqlPane({ tab, active }: Props) {
               {set?.columns.length ? (
                 <SqlGrid set={set} />
               ) : (
-                <div className="sql-messages">
+                <div className="sql-messages" tabIndex={0}>
                   {outcome.error && <div className="sql-error">{outcome.error}</div>}
                   {messages.map((m, i) => (
                     <div key={i}>{m}</div>
@@ -692,9 +717,12 @@ export default function SqlPane({ tab, active }: Props) {
               setConnError('')
               side.current?.focus()
             }}
+            onFocus={() => setPart('form')}
           />
         )}
       </div>
+      </div>
+      <Hints items={hints} />
     </div>
   )
 }
@@ -708,10 +736,11 @@ type FormProps = {
   onSave(c: S.SqlConnection): void
   onDelete?: () => void
   onCancel(): void
+  onFocus(): void
 }
 
 // Where a connection goes: SQLite needs a file; the others a server, a user and a database.
-function ConnectionForm({ initial, was, error, busy, onConnect, onSave, onDelete, onCancel }: FormProps) {
+function ConnectionForm({ initial, was, error, busy, onConnect, onSave, onDelete, onCancel, onFocus }: FormProps) {
   const [c, setC] = useState<S.SqlConnection>(initial)
   const first = useRef<HTMLInputElement>(null)
   useEffect(() => first.current?.focus(), [])
@@ -758,6 +787,7 @@ function ConnectionForm({ initial, was, error, busy, onConnect, onSave, onDelete
   return (
     <div
       className="sql-form connect"
+      onFocus={onFocus}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
           e.preventDefault()

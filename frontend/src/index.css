@@ -334,14 +334,24 @@ body,
   color: var(--dim);
   padding: 8px 2ch;
 }
-.explorer-help,
-.scm-help {
+/* The hints line at the bottom of the explorer, Git and SQL tabs. */
+.hints {
+  display: flex;
+  gap: 3ch;
   color: var(--dim);
   padding: 3px 1ch;
   border-top: 1px solid var(--separator);
   white-space: pre;
+  flex: none;
+  font-family: var(--mono);
+}
+.hints-keys {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.hints-nav {
   flex: none;
 }
 
@@ -813,8 +823,14 @@ body,
 /* SQL: connections or tables on the left; the query above its results on the right. */
 .sql {
   display: flex;
+  flex-direction: column;
   height: 100%;
   font-family: var(--mono);
+}
+.sql-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 .sql-side {
   flex: none;
@@ -881,13 +897,6 @@ body,
 }
 .sql-bad {
   color: var(--red);
-}
-.sql-help {
-  color: var(--dim);
-  padding: 3px 1ch;
-  border-top: 1px solid var(--separator);
-  white-space: pre-wrap;
-  flex: none;
 }
 .sql-main {
   flex: 1;
@@ -977,6 +986,7 @@ body,
   white-space: pre-wrap;
   user-select: text;
   line-height: 1.6;
+  outline: none;
 }
 .sql-error {
   color: var(--red);
