@@ -113,7 +113,8 @@ In PowerShell:
 powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
 ```
 
-"This computer" works there as in the app, including the folder picker. Connecting to a
+"This computer" works there as in the app, including the folder picker. Under WSL the
+picker is Windows' own, and Windows paths (`C:\Users\...`) open as their `/mnt/c/...` folders. Connecting to a
 container uploads the Go agent from `internal/remote/agentbin/`, so build it once with
 `go run ./scripts/buildagent` (the scripts do this when Go is installed).
 
