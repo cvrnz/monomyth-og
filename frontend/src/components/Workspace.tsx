@@ -147,7 +147,6 @@ function StatusBar() {
   return (
     <div className="statusbar">
       <span className="left">
-        {'  '}
         {mode}
         {conn.state === 'lost' && <span className="lost">{'    '}Disconnected</span>}
       </span>
@@ -158,7 +157,6 @@ function StatusBar() {
             {p}
           </span>
         ))}
-        {'  '}
       </span>
     </div>
   )
