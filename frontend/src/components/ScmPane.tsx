@@ -329,7 +329,6 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     else if (key === 'G' || key === 'End') move(1e9)
     else if (key === 'Enter' || key === 'o') choose(entry)
     else if (key === 'R') refresh()
-    else if (key === ':') S.set({ palette: { mode: 'commands' } })
     else return
     e.preventDefault()
   }

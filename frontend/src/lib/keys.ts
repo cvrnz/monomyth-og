@@ -16,8 +16,8 @@ const bindings: Binding[] = [
   { code: 'KeyW', run: () => A.closeFocused() },
   { code: 'KeyS', run: () => A.save() },
   { code: 'KeyN', run: () => A.newTab() },
-  { code: 'KeyP', run: () => openSearch() },
-  { code: 'KeyP', shift: true, run: () => S.set({ palette: { mode: 'commands' }, search: null, explorer: false }) },
+  { code: 'KeyP', run: () => openPalette() },
+  { code: 'KeyF', run: () => openSearch() },
   { code: 'KeyG', run: () => A.openScm() },
   { code: 'KeyE', run: () => A.toggleExplorer() },
   { code: 'KeyT', run: () => A.openTerminal() },
@@ -30,6 +30,12 @@ const bindings: Binding[] = [
   // Cmd+1 ... Cmd+9: switch projects.
   ...Array.from({ length: 9 }, (_, i): Binding => ({ code: `Digit${i + 1}`, run: () => A.switchToProject(i), project: true })),
 ]
+
+function openPalette() {
+  const s = S.get()
+  S.set({ palette: s.palette ? null : { mode: 'commands' }, previewTheme: null, search: null, explorer: false })
+  if (s.palette) A.focusActive()
+}
 
 function openSearch() {
   const s = S.get()

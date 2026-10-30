@@ -1,4 +1,4 @@
-// Search (Cmd+P): file names, or text inside files. Tab switches between the two and keeps
+// Search (Cmd+F): file names, or text inside files. Tab switches between the two and keeps
 // what you typed. Both include hidden files, skip .git and respect .gitignore. The selected
 // result is previewed on the right; Enter opens it (at the matching line for text).
 import { useEffect, useMemo, useRef, useState } from 'react'

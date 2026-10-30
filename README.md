@@ -27,7 +27,8 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | W | Close the tab or split (asks about unsaved changes; closing the last tab closes the project, or quits when it's the only one) |
 | S | Save (asks for a path for a new file) |
 | N | New tab |
-| P | Search file names; Tab switches to searching text |
+| P | Command palette |
+| F | Search file names; Tab switches to searching text |
 | G | Source control |
 | E | File explorer |
 | T | Terminal in a new tab |
@@ -35,7 +36,6 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | Shift+\\ | Terminal split to the right |
 | H / L | Previous / next tab |
 | J / K | Next / previous split |
-| Shift+P | Command palette (also `:` in a file, the welcome screen and source control) |
 | 1 … 9 | Switch to the first … ninth project |
 
 Several projects (containers or local folders) can be open in one window, each with its own
@@ -53,13 +53,13 @@ Ctrl+V pastes. Selecting text in a terminal copies it.
 In a terminal, Esc Esc switches to normal mode, as in nvim (a single Esc still goes to the
 shell): `h`/`j`/`k`/`l`, `w`/`b`/`e`, `0`/`^`/`$`, `gg`/`G`, `H`/`M`/`L` and Ctrl+U/D/B/F/E/Y
 move through the output and scrollback, `v`/`V` select, `y` copies (`yy` the line), `/` and
-`?` search (`n`/`N` repeat), `:` opens the command palette. `i`, `a` or Enter goes back to
+`?` search (`n`/`N` repeat). `i`, `a` or Enter goes back to
 the shell.
 
 The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `ToggleVim`,
 `FontSize 15`, `MaxColumns 100`, `Reconnect`, `NewProject`, `Disconnect`, ...) and, in a file with Vim
-keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`). Tab completes the
-highlighted command.
+keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`; `:` in the file opens Vim's own
+prompt for those too). Tab completes the highlighted command.
 
 - **Explorer** (Cmd+E): `j`/`k` move, `l`/Enter open or expand, `h` collapse, `a` new file
   (end with `/` for a folder), `r` rename or move, `d` delete, `y` copy the path, `R` refresh.

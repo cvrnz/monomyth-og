@@ -285,7 +285,6 @@ export default function Explorer() {
       toast(`Copied ${node.path}`)
     } else if (k === 'R') refresh()
     else if (k === 'Escape' || k === 'q') close()
-    else if (k === ':') S.set({ explorer: false, palette: { mode: 'commands' } })
     else return
     e.preventDefault()
     e.stopPropagation()

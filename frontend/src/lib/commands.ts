@@ -1,4 +1,4 @@
-// Everything the command palette (`:`) can run. Like the nvim palette, what you type can also
+// Everything the command palette (Cmd+P) can run. Like the nvim palette, what you type can also
 // be a command line: a command with arguments (`FontSize 16`, `e src/app.ts`), or, in a file
 // with Vim keybindings on, any Ex command (`%s/a/b/g`, `10`, `sort`).
 import * as A from './actions'
@@ -17,7 +17,6 @@ export type Command = {
 }
 
 export function keyLabel(keys: string): string {
-  if (keys === ':') return ':'
   if (S.isMac()) return '⌘' + keys.replace('Shift+', '⇧')
   return 'Ctrl+' + keys
 }
@@ -59,7 +58,7 @@ export const commands: Command[] = [
   {
     name: 'Search',
     desc: 'Search file names',
-    keys: 'P',
+    keys: 'F',
     aliases: ['Files', 'Find'],
     run: (args) => S.set({ search: { kind: 'files', text: args.trim() }, palette: null, explorer: false }),
   },

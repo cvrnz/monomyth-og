@@ -480,7 +480,7 @@ body,
   font-family: var(--mono);
   white-space: pre-wrap;
 }
-/* monaco-vim's prompt (`/`, `?`, visual `:`) and messages, floating over the bottom row like
+/* monaco-vim's prompt (`/`, `?`, `:`) and messages, floating over the bottom row like
    the nvim command line. Its mode and pending-keys parts aren't shown: the status bar has the mode. */
 .vim-status {
   position: absolute;
