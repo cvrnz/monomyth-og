@@ -21,7 +21,7 @@ Everything in the original plan is built:
 - **Agent**: added `fs.files` and `fs.grep` (agent/search.go) for Cmd+P: ripgrep when present,
   otherwise `git ls-files` (respects .gitignore) / a walk, and a Go search.
 - **Frontend**: `src/lib` (bridge via `Call.ByName("editor/internal/app.App.<Method>")` and
-  `Events.On`, falling back to the devserver; store; actions; commands; keys; connection;
+  `Events.On`, falling back to HTTP to `server/`; store; actions; commands; keys; connection;
   terminals; vim; settings; fuzzy) and `src/components` (ConnectScreen, Workspace with tab bar,
   status bar and split panes, EditorPane, TerminalPane, ScmPane, Explorer, CommandPalette,
   SearchModal, Welcome, Dialogs).
@@ -42,7 +42,7 @@ Everything in the original plan is built:
   advisories).
 - `wails3 task windows:build ARCH=amd64` produces a working-looking `bin/Monomyth.exe` (PE x64,
   GUI subsystem, agents embedded). It hasn't been run on Windows.
-- Browser tests with Playwright against `cmd/devserver` + a local agent: connect, welcome,
+- Browser tests with Playwright against the (since removed) Go devserver + a local agent: connect, welcome,
   file/text search, open at line, Vim editing, `:w`, `:%s` through the palette, theme preview,
   terminals, splits, closing a file with splits (terminals take the tab and keep their shell),
   unsaved-changes dialog, save-as, explorer new file, source control diff and push, agent

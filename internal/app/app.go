@@ -1,6 +1,6 @@
 // Package app is what the window's JavaScript calls: settings, picking a container, and a
-// pipe to the agent running in it. The desktop app registers it as a Wails service;
-// cmd/devserver serves it over HTTP so the UI can be worked on in a browser.
+// pipe to the agent running in it. The desktop app registers it as a Wails service (server/
+// is the same service in Node, for running in a browser).
 package app
 
 import (
@@ -22,11 +22,8 @@ type App struct {
 	Emit func(event string, data any)
 	// QuitFn closes the window for real (after the user has said to discard unsaved changes).
 	QuitFn func()
-	// PickFolderFn shows the system's folder picker; nil where there's none (the devserver).
+	// PickFolderFn shows the system's folder picker; nil where there's none.
 	PickFolderFn func() (string, error)
-	// LocalAgent, when set, is an agent binary to run on this machine instead of connecting to
-	// a cluster (for development).
-	LocalAgent   string
 	SettingsPath string
 
 	mu       sync.Mutex
@@ -76,20 +73,9 @@ func (a *App) oc() remote.Oc {
 
 func (a *App) Platform() string { return runtime.GOOS }
 
-func (a *App) OcProjects() (remote.Projects, error) {
-	if a.LocalAgent != "" {
-		return remote.Projects{Names: []string{"local"}, Current: "local"}, nil
-	}
-	return a.oc().Projects()
-}
+func (a *App) OcProjects() (remote.Projects, error) { return a.oc().Projects() }
 
-func (a *App) OcPods(project string) ([]remote.Pod, error) {
-	if a.LocalAgent != "" {
-		host, _ := os.Hostname()
-		return []remote.Pod{{Name: host, Workspace: "this machine", Containers: []string{"local"}, Ready: true}}, nil
-	}
-	return a.oc().Pods(project)
-}
+func (a *App) OcPods(project string) ([]remote.Pod, error) { return a.oc().Pods(project) }
 
 // Connect starts the agent in the container, replacing any earlier connection. Progress
 // comes as agent:status events, the agent's events as agent:event, and a dropped
@@ -120,9 +106,6 @@ func (a *App) Connect(t remote.Target) error {
 		status("Opening…")
 		toolsOnPath()
 		mine = remote.InProcess(agent.Serve, onEvent, onClose)
-	} else if a.LocalAgent != "" {
-		status("Starting…")
-		mine, err = remote.Local(a.LocalAgent, onEvent, onClose)
 	} else {
 		mine, err = a.oc().Connect(t, status, onEvent, onClose)
 	}

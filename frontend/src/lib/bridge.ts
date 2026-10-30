@@ -1,6 +1,6 @@
-// The way to the Go side. In the desktop app that's the Wails v3 runtime: calls by name to the
-// app service (internal/app.App) and its events. In a browser running `pnpm dev`, it's
-// cmd/devserver over HTTP, with events over server-sent events.
+// The way to the backend. In the desktop app that's the Wails v3 runtime: calls by name to the
+// app service (internal/app.App) and its events. In a browser running `pnpm dev`, it's the
+// Node server (server/) over HTTP, with events over server-sent events.
 import { Call, Clipboard, Events } from '@wailsio/runtime'
 
 type Listener = (data: any) => void

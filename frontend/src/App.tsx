@@ -3,7 +3,7 @@ import ConnectScreen from './components/ConnectScreen'
 import Dialogs from './components/Dialogs'
 import Workspace from './components/Workspace'
 import { dirtyCount, quit } from './lib/actions'
-import { invoke, on } from './lib/bridge'
+import { inWails, invoke, on } from './lib/bridge'
 import { installKeys } from './lib/keys'
 import { applyTheme, loadSettings } from './lib/settings'
 import * as S from './lib/store'
@@ -30,11 +30,17 @@ export default function App() {
       }
     })
     const offQuit = on('app:quit-requested', () => quit())
+    // In a browser, closing the tab asks the same way.
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (dirty) e.preventDefault()
+    }
+    if (!inWails) window.addEventListener('beforeunload', beforeUnload)
     return () => {
       unsubTheme()
       uninstallKeys()
       unsubDirty()
       offQuit()
+      window.removeEventListener('beforeunload', beforeUnload)
     }
   }, [])
 

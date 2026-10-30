@@ -25,7 +25,7 @@ export default defineConfig({
     host: '127.0.0.1',
     port: Number(process.env.WAILS_VITE_PORT) || 9245,
     strictPort: true,
-    // For working on the UI in a browser: cmd/devserver answers what the Wails runtime would.
+    // For working on the UI in a browser: server/ answers what the Wails runtime would.
     proxy: { '/api': { target: 'http://127.0.0.1:34115', changeOrigin: true } },
   },
 })
