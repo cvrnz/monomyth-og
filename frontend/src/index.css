@@ -62,6 +62,10 @@ body,
   color: var(--dim);
   font-weight: normal;
 }
+.tab:not(.active):hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+}
 .tabbar-spacer {
   height: var(--row);
   flex: none;
@@ -194,6 +198,12 @@ body,
 .row.selected {
   background: var(--raised);
 }
+/* Rows in the lists respond to the mouse: a lighter shade than the selection. */
+.explorer-tree .row:not(.selected):not(:empty):hover,
+.scm-side .row:not(.selected):not(:empty):hover,
+.results .row:not(.selected):hover {
+  background: color-mix(in srgb, var(--raised) 55%, transparent);
+}
 .row .desc,
 .dim {
   color: var(--dim);
@@ -283,6 +293,10 @@ body,
   background: var(--raised);
   font-weight: bold;
 }
+.scm-tabs span:not(.on):hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+}
 .scm-side .row.selected {
   background: var(--raised);
 }
@@ -358,6 +372,10 @@ body,
 .welcome .art pre {
   margin: 0;
   font: inherit;
+  transition: filter 0.15s;
+}
+.welcome .art:hover pre {
+  filter: brightness(1.25);
 }
 .welcome .shortcuts {
   display: grid;
@@ -583,6 +601,10 @@ body,
 .connect .text-input:focus {
   border-color: var(--blue);
 }
+.connect .text-input:hover:not(:focus),
+.dialog-input:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--fg) 30%, var(--border));
+}
 .connect .status {
   display: flex;
   align-items: center;
@@ -657,6 +679,9 @@ body,
 }
 .toast.error {
   border-left-color: var(--red);
+}
+.toast:hover {
+  background: var(--raised);
 }
 
 .dialog-input {
