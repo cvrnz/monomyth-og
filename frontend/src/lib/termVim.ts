@@ -3,7 +3,7 @@
 // a moment later); i, a, I, A or Enter goes back to typing into the shell.
 //
 // Motions: h j k l, w b e, 0 ^ $, gg G, H M L, Ctrl+U/D/B/F/E/Y, counts. v and V select, y
-// copies (yy copies the line), / and ? search (n N repeat), : opens the command palette.
+// copies (yy copies the line), / and ? search (n N repeat).
 import type { IDecoration, IMarker, Terminal } from '@xterm/xterm'
 import { copyText } from './bridge'
 
@@ -15,7 +15,6 @@ type Hooks = {
   send(data: string): void // to the shell
   changed(mode: TermMode): void
   prompt(back: boolean): void // ask for a search
-  palette(): void
 }
 
 const escTimeout = 300
@@ -274,9 +273,6 @@ export class TermVim {
       case 'n':
       case 'N':
         if (this.lastSearch) for (let i = 0; i < n; i++) this.find(this.lastSearch.text, this.lastSearch.back !== (k === 'N'))
-        return
-      case ':':
-        this.hooks.palette()
         return
     }
   }

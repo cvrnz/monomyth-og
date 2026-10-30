@@ -1,4 +1,4 @@
-// The command palette (`:`), like the nvim config's: every command with its description,
+// The command palette (Cmd+P), like the nvim config's: every command with its description,
 // filtered as you type.
 //   Enter  runs the highlighted command. If what you typed is already a command line
 //          (`w`, `FontSize 16`, `%s/a/b/g` in a Vim file) and you haven't moved the highlight

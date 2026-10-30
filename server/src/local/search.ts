@@ -1,4 +1,4 @@
-// Search for Cmd+P: file names and text inside files (see internal/agent/search.go). Both
+// Search for Cmd+F: file names and text inside files (see internal/agent/search.go). Both
 // include hidden files, skip .git and respect .gitignore, like the nvim config's ripgrep
 // searches. ripgrep is used when it's installed; otherwise git lists the files and they're
 // searched here.

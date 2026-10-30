@@ -143,7 +143,6 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
       },
       changed: () => status(),
       prompt: (back) => setPrompt({ back }),
-      palette: () => S.set({ palette: { mode: 'commands' }, search: null, explorer: false }),
     })
     vimRef.current = vim
 

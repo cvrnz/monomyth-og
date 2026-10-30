@@ -1,6 +1,5 @@
-// Vim keybindings (monaco-vim), set up once for every editor: `:` in normal mode opens the
-// command palette, as in the nvim config (visual mode keeps the plain `:` prompt for its
-// '<,'> range), and the file commands (:w, :q, :e, ...) do what the app's do.
+// Vim keybindings (monaco-vim), set up once for every editor: the file commands (:w, :q, :e,
+// ...) do what the app's do.
 import { VimMode } from 'monaco-vim'
 import * as A from './actions'
 import { pane } from './panes'
@@ -26,9 +25,6 @@ let ready = false
 export function setupVim() {
   if (ready) return
   ready = true
-  Vim.defineAction('openPalette', () => S.set({ palette: { mode: 'commands' }, search: null, explorer: false }))
-  Vim.mapCommand(':', 'action', 'openPalette', {}, { context: 'normal' })
-
   const ex = (name: string, prefix: string, fn: (args: string) => unknown) =>
     Vim.defineEx(name, prefix, (_cm, params) => {
       fn((params.args ?? []).join(' ').trim())

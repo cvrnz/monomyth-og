@@ -123,7 +123,7 @@ export default function Welcome({ id, active }: { id: string; active: boolean })
   const items = useMemo(
     () => [
       ['Explorer', keyLabel('E')],
-      ['Find files and text', keyLabel('P')],
+      ['Find files and text', keyLabel('F')],
       ['Terminal', keyLabel('T')],
       ['Split terminal', keyLabel('\\')],
       ['New tab', keyLabel('N')],
@@ -131,7 +131,7 @@ export default function Welcome({ id, active }: { id: string; active: boolean })
       ['Switch projects', `${keyLabel('1')}  ${keyLabel('2')}  …`],
       ['Source control', keyLabel('G')],
       ['Close', keyLabel('W')],
-      ['Command palette', ':'],
+      ['Command palette', keyLabel('P')],
     ],
     // The keys read âŒ˜ or Ctrl depending on the platform.
     [platform],
@@ -196,7 +196,6 @@ export default function Welcome({ id, active }: { id: string; active: boolean })
     if (e.metaKey || e.ctrlKey || e.altKey) return
     if (e.key === 'Tab' || e.key === ' ' || e.key === 'Enter') another()
     else if ('iaoIAO'.includes(e.key) && e.key.length === 1) newFileHere()
-    else if (e.key === ':') S.set({ palette: { mode: 'commands' } })
     else return
     e.preventDefault()
   }

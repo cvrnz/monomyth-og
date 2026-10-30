@@ -17,7 +17,7 @@ import (
 	"unicode/utf8"
 )
 
-// Search for Cmd+P: file names and text inside files. Both include hidden files, skip .git
+// Search for Cmd+F: file names and text inside files. Both include hidden files, skip .git
 // and respect .gitignore, like the nvim config's ripgrep searches. ripgrep is used when the
 // container has it; otherwise git lists the files and the agent searches them itself.
 
