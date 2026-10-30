@@ -1,5 +1,5 @@
-// Builds the container agent for linux/amd64 and linux/arm64 into internal/remote/agentbin,
-// where the app embeds it. Run before `wails build` / `wails dev`:
+// Builds the container agent for linux/amd64 and linux/arm64 into agent/bin, where the Node
+// server (server/src/remote.ts) uploads it from when connecting to a container:
 //
 //	go run ./scripts/buildagent
 package main
@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	out := filepath.Join("internal", "remote", "agentbin")
+	out := filepath.Join("agent", "bin")
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		fail(err)
 	}

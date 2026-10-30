@@ -136,5 +136,3 @@ export function restoreSession(): () => void {
     clearTimeout(timer)
   }
 }
-
-export { flush as saveSessionNow }

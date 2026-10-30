@@ -1,13 +1,13 @@
 # Monomyth
 
-Monomyth is a desktop editor for macOS and Windows, for files on your computer or inside an OpenShift /
+Monomyth is an editor that runs in an app window (Edge or Chrome) on macOS, Windows and Linux, for files on your computer or inside an OpenShift /
 Dev Spaces container. For a container it uses your `oc` login: pick a project, pod and
 container, and the app uploads a small agent into it (`oc exec`) that reads and writes files,
-runs shells and git. For local files the same agent runs inside the app. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
+runs shells and git. For local files a Node server on your computer does the same work. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
 status bar, command palette, explorer and source control tabs, centered content and
 themes. It also has SQL tabs, for querying databases.
 
-Built with Wails v3, React, TypeScript, HeroUI, Monaco (with monaco-vim) and xterm.js.
+Built with Node, React, TypeScript, HeroUI, Monaco (with monaco-vim) and xterm.js.
 
 ## Using it
 
@@ -126,31 +126,9 @@ strings, `cyan` types). The folder can be a link to one kept elsewhere, like a d
 If the connection drops, the app reconnects once by itself and otherwise shows a Reconnect
 button; open files and unsaved changes stay, and terminals start a new shell when typed in.
 
-## Building
+## Running it
 
-Needs Go 1.26+, Node 22+, pnpm and the Wails v3 CLI:
-
-```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
-```
-
-Then, on the platform you're building for:
-
-```sh
-wails3 build          # bin/Monomyth on macOS, bin/Monomyth.exe on Windows
-wails3 package        # the macOS .app bundle / the Windows installer
-```
-
-The build first compiles the container agent for linux/amd64 and linux/arm64
-(`go run ./scripts/buildagent`, into `internal/remote/agentbin/`) and embeds it. A Windows
-build can also be made from Linux or macOS: `wails3 task windows:build ARCH=amd64`. A macOS
-build needs a Mac (or `wails3 task setup:docker` for cross-compiling).
-
-## Developing
-
-`wails3 dev` runs the app with hot reload.
-
-Or run it with no exe of its own: a Node server (`server/`, the app's service over HTTP on
+It runs as a Node server (`server/`, the app's service over HTTP on
 :34115), Vite (http://127.0.0.1:9245), and an app window (Edge or Chrome with `--app`, on its
 own profile; no tabs or address bar). Needs Node 22.18+ and pnpm. Closing the window (or
 Ctrl+C) stops everything; `--browser` / `-Browser` skips the window. In Git Bash (or on
@@ -166,26 +144,23 @@ In PowerShell:
 powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
 ```
 
-"This computer" works there as in the app, including the folder picker. Under WSL the
+"This computer" works there, including the folder picker. Under WSL the
 picker is Windows' own, and Windows paths (`C:\Users\...`) open as their `/mnt/c/...` folders. Connecting to a
-container uploads the Go agent from `internal/remote/agentbin/`, so build it once with
-`go run ./scripts/buildagent` (the scripts do this when Go is installed).
+container uploads the Go agent from `agent/bin/`, so build it once with
+`go run ./scripts/buildagent` (needs Go 1.26+; the scripts do this when Go is installed).
 
-Checks: `go vet ./agent ./internal/...`, `cd frontend && pnpm build && pnpm lint`,
+Checks: `GOOS=linux go vet ./...`, `cd frontend && pnpm build && pnpm lint`,
 `cd server && pnpm typecheck && pnpm test`.
 
 ## Layout
 
-- `internal/agent` — does the work where the files are: newline-delimited JSON requests and
-  events. Files (`fs.*`, including `fs.files`/`fs.grep` search, using ripgrep when it's
-  installed), shells (`term.*`, on a pty or Windows ConPTY via go-pty) and git (`scm.*`).
-  Paths go over the wire with forward slashes, also on Windows (`C:/Users/...`).
+- `internal/agent` — the Go agent that does the work inside a container: newline-delimited
+  JSON requests and events. Files (`fs.*`, including `fs.files`/`fs.grep` search, using
+  ripgrep when it's installed), shells (`term.*`, on a pty via go-pty) and git (`scm.*`).
 - `agent/` — the agent binary for containers (linux), serving `internal/agent` over
-  stdin/stdout. On this computer the app runs `internal/agent` in-process instead.
-- `internal/proto` — the wire format. `internal/remote` — finding `oc`, listing projects and
-  pods, uploading and starting the agent. `internal/app` — the service the window calls.
-- `main.go` — the Wails app and window.
-- `server/` — the same service in Node (TypeScript run directly by Node, no build), for the
+  stdin/stdout; `go run ./scripts/buildagent` builds it into `agent/bin/`.
+- `internal/proto` — the agent's wire format.
+- `server/` — the app's service in Node (TypeScript run directly by Node, no build), for the
   browser: `src/local` ports `internal/agent` for this computer (terminals on node-pty) and
   `src/remote.ts` connects to containers with `oc` and the Go agent. `src/sql` runs the SQL
   tabs' queries (pg, mysql2, mssql, and Node's own SQLite in a child process so a query can

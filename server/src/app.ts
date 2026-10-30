@@ -1,6 +1,6 @@
 // What the window calls: settings, picking a container, and a connection to the agent, either
-// the local one in this process or the one in a container (see internal/app, the desktop
-// app's version). Events go to the window through emit.
+// the local one in this process or the one in a container. Events go to the window through
+// emit.
 import { promises as fs, readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -15,7 +15,7 @@ interface Connection {
   close(): Promise<void>
 }
 
-// The desktop app's settings file, so both share settings and recent connections.
+// Settings and recent connections, in the user's config folder.
 function settingsPath(): string {
   const home = os.homedir()
   const dir = isWindows
@@ -188,9 +188,4 @@ export class App {
     if (r.code === 1) return '' // cancelled
     throw new Error("there's no folder picker here; type the folder's path")
   }
-
-  // The desktop app asks about unsaved changes when its window closes; in a browser the page
-  // asks itself (beforeunload), so these do nothing here.
-  SetDirty() {}
-  Quit() {}
 }

@@ -3,10 +3,9 @@
 // new tab after it. The explorer and Git are always the first two tabs; closing the last of
 // the others leaves a welcome screen.
 import { agent } from './agent'
-import { errorText, inWails, invoke } from './bridge'
+import { errorText } from './bridge'
 import { choose, prompt, toast } from './dialogs'
 import { pane } from './panes'
-import { saveSessionNow } from './session'
 import { basename, join, normalize } from './paths'
 import * as S from './store'
 
@@ -296,8 +295,8 @@ export function switchToProject(index: number) {
   focusActive()
 }
 
-// Quitting with unsaved changes asks first. In a browser (the dev server) there's no window to
-// close, so the welcome screen comes back instead.
+// Quitting with unsaved changes asks first. The window stays open (closing it is the browser's
+// job), so the welcome screen comes back instead.
 export async function quit() {
   const n = dirtyCount(true)
   if (n > 0) {
@@ -313,10 +312,5 @@ export async function quit() {
     if (choice === 'cancel') return
     if (choice === 'save' && !(await saveAll(true))) return
   }
-  if (inWails) {
-    saveSessionNow()
-    await invoke('Quit')
-  } else if (S.get().tabs.length === 0) {
-    openWelcome()
-  }
+  if (S.get().tabs.length === 0) openWelcome()
 }

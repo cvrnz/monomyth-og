@@ -37,8 +37,6 @@ const methods: Record<string, (args: any[]) => unknown> = {
   PickFolder: () => app.PickFolder(),
   Disconnect: ([id]) => app.Disconnect(String(id ?? '')),
   Call: ([method, params, id]) => app.Call(String(method ?? ''), String(params ?? ''), String(id ?? '')),
-  SetDirty: () => app.SetDirty(),
-  Quit: () => app.Quit(),
   // SQL tabs' databases, reached from this computer.
   SqlConnect: ([id, config]) => sql.connect(String(id ?? ''), config),
   SqlQuery: ([id, text]) => sql.query(String(id ?? ''), String(text ?? '')),

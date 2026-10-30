@@ -23,7 +23,7 @@ foreach ($dir in 'frontend', 'server') {
 }
 
 # Containers need the Go agent (built once, uploaded to the pod); local folders don't.
-if (-not (Test-Path 'internal\remote\agentbin\agent-linux-amd64')) {
+if (-not (Test-Path 'agent\bin\agent-linux-amd64')) {
     if (Get-Command go -ErrorAction SilentlyContinue) {
         go run ./scripts/buildagent
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
