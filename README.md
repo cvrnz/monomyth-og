@@ -41,6 +41,12 @@ On Windows, plain Ctrl shortcuts are left to the shell inside terminals and to V
 mode (so Ctrl+W, Ctrl+L and the rest keep working there); use Ctrl+Shift+<key> instead.
 Ctrl+C copies selected terminal text and Ctrl+V pastes. Selecting text in a terminal copies it.
 
+In a terminal, Esc Esc switches to normal mode, as in nvim (a single Esc still goes to the
+shell): `h`/`j`/`k`/`l`, `w`/`b`/`e`, `0`/`^`/`$`, `gg`/`G`, `H`/`M`/`L` and Ctrl+U/D/B/F/E/Y
+move through the output and scrollback, `v`/`V` select, `y` copies (`yy` the line), `/` and
+`?` search (`n`/`N` repeat), `:` opens the command palette. `i`, `a` or Enter goes back to
+the shell. The app's Ctrl shortcuts work in normal mode without Shift.
+
 The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `ToggleVim`,
 `FontSize 15`, `MaxColumns 100`, `Reconnect`, `Disconnect`, ...) and, in a file with Vim
 keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`). Tab completes the

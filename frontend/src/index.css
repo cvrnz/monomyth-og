@@ -433,6 +433,19 @@ body,
   position: absolute;
   inset: 0 0 0 1ch;
 }
+.term-search {
+  position: absolute;
+  left: 1ch;
+  right: 0;
+  bottom: 0;
+  height: var(--row);
+  padding: 0 1ch;
+  border: none;
+  outline: none;
+  background: var(--selection);
+  color: var(--fg);
+  font: inherit;
+}
 .term-host .xterm {
   height: 100%;
   padding: 0;

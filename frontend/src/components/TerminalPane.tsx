@@ -13,6 +13,7 @@ import { basename } from '../lib/paths'
 import { currentTheme } from '../lib/settings'
 import * as S from '../lib/store'
 import { openShell, type Shell } from '../lib/terminals'
+import { TermVim } from '../lib/termVim'
 import { xtermTheme } from '../lib/themes'
 
 type Props = { id: string; tabId: string; cwd: string; active: boolean; centered: boolean }
@@ -20,6 +21,9 @@ type Props = { id: string; tabId: string; cwd: string; active: boolean; centered
 export default function TerminalPane({ id, tabId, cwd, active, centered }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
+  const vimRef = useRef<TermVim | null>(null)
+  // The / or ? search being typed in normal mode.
+  const [prompt, setPrompt] = useState<{ back: boolean } | null>(null)
   // A split terminal can take over its tab (when the tab's file closes), which changes the tab
   // it's in; that mustn't restart the shell.
   const tabRef = useRef(tabId)
@@ -60,7 +64,7 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
     let disposed = false
 
     const status = () =>
-      S.setPaneStatus(id, { mode: 'terminal', items: [title && !title.startsWith('term://') ? title : shellName] })
+      S.setPaneStatus(id, { mode: vim.mode, items: [title && !title.startsWith('term://') ? title : shellName] })
 
     const doFit = () => {
       const el = host.current
@@ -129,13 +133,24 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
       return false
     }
 
+    const vim = new TermVim(term, {
+      send: (data) => {
+        if (!onKey()) shell?.write(data)
+      },
+      changed: () => status(),
+      prompt: (back) => setPrompt({ back }),
+      palette: () => S.set({ palette: { mode: 'commands' }, search: null, explorer: false }),
+    })
+    vimRef.current = vim
+
     const subs = [
+      // In normal mode nothing typed goes to the shell.
       term.onData((data) => {
-        if (onKey()) return
+        if (vim.mode !== 'terminal' || onKey()) return
         shell?.write(data)
       }),
       term.onBinary((data) => {
-        if (onKey()) return
+        if (vim.mode !== 'terminal' || onKey()) return
         shell?.writeBinary(data)
       }),
       term.onResize(({ cols, rows }) => shell?.resize(cols, rows)),
@@ -143,13 +158,15 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
         title = t
         status()
       }),
+      // In normal mode, y copies instead.
       term.onSelectionChange(() => {
-        if (term.hasSelection()) copyText(term.getSelection())
+        if (vim.mode === 'terminal' && term.hasSelection()) copyText(term.getSelection())
       }),
     ]
 
     // Off macOS, Ctrl+C copies when text is selected, and Ctrl+V pastes (like Windows Terminal).
     term.attachCustomKeyEventHandler((e) => {
+      if (!vim.key(e)) return false
       if (e.type !== 'keydown' || S.isMac() || !e.ctrlKey || e.altKey || e.metaKey) return true
       if (e.code === 'KeyV' && !e.shiftKey) {
         e.preventDefault()
@@ -171,7 +188,7 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
       if (term.options.theme?.background !== theme.background || term.options.theme?.foreground !== theme.foreground) term.options.theme = theme
     })
 
-    const unregister = register(id, { focus: () => term.focus() })
+    const unregister = register(id, { focus: () => term.focus(), shellInput: () => vim.mode === 'terminal' })
     start()
 
     return () => {
@@ -181,6 +198,8 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
       unsubTheme()
       observer.disconnect()
       subs.forEach((s) => s.dispose())
+      vim.dispose()
+      vimRef.current = null
       shell?.close()
       term.dispose()
       termRef.current = null
@@ -214,6 +233,22 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
   return (
     <div className={`pane-inner ${centered ? 'centered' : ''}`} style={centered ? { maxWidth: width } : undefined}>
       <div ref={host} className="term-host" />
+      {prompt && (
+        <input
+          className="term-search"
+          autoFocus
+          spellCheck={false}
+          placeholder={prompt.back ? '?' : '/'}
+          onBlur={() => setPrompt(null)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== 'Escape') return
+            e.preventDefault()
+            if (e.key === 'Enter') vimRef.current?.search(e.currentTarget.value, prompt.back)
+            setPrompt(null)
+            termRef.current?.focus()
+          }}
+        />
+      )}
     </div>
   )
 }
