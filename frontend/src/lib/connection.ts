@@ -4,6 +4,7 @@ import { agentFor } from './agent'
 import { errorText, invoke, on } from './bridge'
 import { choose } from './dialogs'
 import { dirtyCount, focusActive, saveAll } from './actions'
+import { restoredTabs } from './session'
 import { updateSettings } from './settings'
 import * as S from './store'
 
@@ -29,7 +30,7 @@ function listen() {
   })
 }
 
-function sameTarget(a: S.Target, b: S.Target) {
+export function sameTarget(a: S.Target, b: S.Target) {
   if (a.local || b.local) return Boolean(a.local && b.local) && a.folder === b.folder
   return a.project === b.project && a.container === b.container && a.folder === b.folder && (a.workspace ? a.workspace === b.workspace : a.pod === b.pod)
 }
@@ -58,7 +59,11 @@ export async function connect(target: S.Target, id = S.get().project) {
     attempts.delete(id)
     S.setProject(id, (p) => ({ conn: { state: 'connected', hello, target }, session: p.session + 1 }))
     remember({ ...target, folder: target.folder || hello.root })
-    if (S.project(id)!.tabs.length === 0) {
+    const restored = restoredTabs(id, target)
+    if (restored) {
+      S.setProject(id, restored)
+      if (id === S.get().project) focusActive()
+    } else if (S.project(id)!.tabs.length === 0) {
       const welcome: S.WelcomeTab = { id: S.newId(), kind: 'welcome' }
       S.setProject(id, { tabs: [welcome], active: welcome.id, explorer: false })
       if (id === S.get().project) focusActive()

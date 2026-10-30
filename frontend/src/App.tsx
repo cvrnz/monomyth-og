@@ -5,6 +5,7 @@ import Workspace from './components/Workspace'
 import { dirtyCount, quit } from './lib/actions'
 import { inWails, invoke, on } from './lib/bridge'
 import { installKeys } from './lib/keys'
+import { restoreSession } from './lib/session'
 import { applyTheme, loadSettings } from './lib/settings'
 import * as S from './lib/store'
 
@@ -16,8 +17,13 @@ export default function App() {
   const fontFamily = S.useStore((s) => s.settings.fontFamily)
 
   useEffect(() => {
+    // Only the latest run of this effect (React runs it twice in development) sets up.
+    let live = true
+    let stopSession = () => {}
     loadSettings().then(() => {
+      if (!live) return
       applyTheme()
+      stopSession = restoreSession()
       setReady(true)
     })
     const unsubTheme = S.subscribe(applyTheme)
@@ -38,6 +44,8 @@ export default function App() {
     }
     if (!inWails) window.addEventListener('beforeunload', beforeUnload)
     return () => {
+      live = false
+      stopSession()
       unsubTheme()
       uninstallKeys()
       unsubDirty()

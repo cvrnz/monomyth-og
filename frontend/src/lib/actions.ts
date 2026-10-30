@@ -6,6 +6,7 @@ import { errorText, inWails, invoke } from './bridge'
 import { closeProject } from './connection'
 import { choose, prompt, toast } from './dialogs'
 import { pane } from './panes'
+import { saveSessionNow } from './session'
 import { basename, join, normalize } from './paths'
 import * as S from './store'
 
@@ -273,6 +274,7 @@ export async function quit() {
     if (choice === 'save' && !(await saveAll(true))) return
   }
   if (inWails) {
+    saveSessionNow()
     await invoke('Quit')
   } else if (S.get().tabs.length === 0) {
     openWelcome()

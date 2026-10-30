@@ -19,7 +19,21 @@ export type Settings = {
   fontFamily: string
   ocPath?: string
   recents: Target[]
+  // What was open when the app last closed, reopened at start (lib/session.ts).
+  session?: SavedSession
 }
+
+// A tab as saved for next time: files by path (untitled ones aren't kept), with the cursor;
+// splits by how many terminals they had.
+export type SavedTab = (
+  | { kind: 'file'; path: string; line?: number; col?: number }
+  | { kind: 'terminal'; cwd: string }
+  | { kind: 'scm' }
+  | { kind: 'welcome' }
+) & { splits?: { dir: Splits['dir']; count: number } }
+
+export type SavedProject = { target: Target; tabs: SavedTab[]; active: number; explorer: boolean }
+export type SavedSession = { projects: SavedProject[]; current: number }
 
 export const defaultSettings: Settings = {
   theme: 'onedark',
