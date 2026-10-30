@@ -38,6 +38,16 @@ export async function invoke<T = unknown>(method: string, ...args: unknown[]): P
   return res.json()
 }
 
+// A call that still goes through while the page is closing (the browser drops ordinary
+// requests then). Nothing comes back.
+export function invokeOnExit(method: string, ...args: unknown[]) {
+  if (inWails) {
+    Call.ByName(`${service}.${method}`, ...args).catch(() => {})
+    return
+  }
+  fetch(`/api/${method}`, { method: 'POST', body: JSON.stringify(args), keepalive: true }).catch(() => {})
+}
+
 export function on(event: string, fn: Listener): () => void {
   if (inWails) {
     return Events.On(event, (ev) => fn(ev.data))

@@ -44,6 +44,12 @@ command) opens another on the connect screen, a middle click or `Disconnect` clo
 Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them. This works with the Node server
 (`scripts/dev.sh`); the desktop app's Go backend still has a single connection.
 
+Monomyth opens where you left off: the projects that were open reconnect, and their tabs come
+back once connected (files at the same cursor, terminals, source control, splits, the current
+tab and project). Unsaved changes and untitled files aren't kept, and terminals start new
+shells. If a project can't reconnect, its connect screen shows why, and its tabs come back
+when you connect it to the same place. This is saved as `session` in the settings file.
+
 Shortcuts work everywhere, Vim's insert mode and terminals included. On Windows, Ctrl+Shift+<key>
 also works as Ctrl+<key>, except in a terminal, where it sends Ctrl+<key> to the shell instead
 (Ctrl+Shift+C for Ctrl+C, Ctrl+Shift+W to delete a word, ...). Esc closes search and the command
