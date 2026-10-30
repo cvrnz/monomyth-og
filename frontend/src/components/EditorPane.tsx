@@ -185,7 +185,6 @@ export default function EditorPane({ tab, active, centered }: Props) {
       vimEx: (command) => {
         if (vimRef.current) Vim.handleEx(vimRef.current, command)
       },
-      vimInsert: () => Boolean(vimRef.current) && modeRef.current === 'insert',
       editor,
     })
 

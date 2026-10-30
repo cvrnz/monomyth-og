@@ -169,9 +169,16 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
     ]
 
     // Off macOS, Ctrl+C copies when text is selected, and Ctrl+V pastes (like Windows Terminal).
+    // The app's shortcuts take the other Ctrl keys, so Ctrl+Shift+<letter> sends Ctrl+<letter>
+    // to the shell (the app's own Ctrl+Shift shortcuts never get here; see lib/keys.ts).
     term.attachCustomKeyEventHandler((e) => {
       if (!vim.key(e)) return false
       if (e.type !== 'keydown' || S.isMac() || !e.ctrlKey || e.altKey || e.metaKey) return true
+      if (e.shiftKey && vim.mode === 'terminal' && /^Key[A-Z]$/.test(e.code)) {
+        e.preventDefault()
+        if (!onKey()) shell?.write(String.fromCharCode(e.code.charCodeAt(3) - 64))
+        return false
+      }
       if (e.code === 'KeyV' && !e.shiftKey) {
         e.preventDefault()
         pasteText().then((text) => text && term.paste(text))

@@ -1,8 +1,8 @@
 // The app's shortcuts, as in the nvim config: Cmd on macOS, Ctrl elsewhere.
 //
-// On macOS the Cmd shortcuts work everywhere, terminals included. Ctrl ones would take keys
-// shells and Vim need (Ctrl+W, Ctrl+L, Ctrl+N, ...), so as in nvim they don't apply inside
-// terminals or in Vim's insert mode (Ctrl+S aside); there, Ctrl+Shift+<key> does the same.
+// They work everywhere: in Vim's insert mode and in terminals too. Off macOS, Ctrl+Shift+<key>
+// does the same as Ctrl+<key>, except in a terminal taking input, where it sends Ctrl+<key>
+// to the shell instead (TerminalPane), so Ctrl+Shift+C is Ctrl+C there.
 // They're caught before the editor or terminal sees them (a capturing listener on window).
 import * as A from './actions'
 import { isDialogOpen } from './dialogs'
@@ -10,11 +10,11 @@ import { pane } from './panes'
 import * as S from './store'
 
 // project: works on the connect screen too, to switch to another project.
-type Binding = { code: string; shift?: boolean; run: () => void; always?: boolean; project?: boolean }
+type Binding = { code: string; shift?: boolean; run: () => void; project?: boolean }
 
 const bindings: Binding[] = [
   { code: 'KeyW', run: () => A.closeFocused() },
-  { code: 'KeyS', run: () => A.save(), always: true },
+  { code: 'KeyS', run: () => A.save() },
   { code: 'KeyN', run: () => A.newTab() },
   { code: 'KeyP', run: () => openSearch() },
   { code: 'KeyP', shift: true, run: () => S.set({ palette: { mode: 'commands' }, search: null, explorer: false }) },
@@ -28,7 +28,7 @@ const bindings: Binding[] = [
   { code: 'KeyJ', run: () => A.cyclePane(1) },
   { code: 'KeyK', run: () => A.cyclePane(-1) },
   // Cmd+1 ... Cmd+9: switch projects.
-  ...Array.from({ length: 9 }, (_, i): Binding => ({ code: `Digit${i + 1}`, run: () => A.switchToProject(i), always: true, project: true })),
+  ...Array.from({ length: 9 }, (_, i): Binding => ({ code: `Digit${i + 1}`, run: () => A.switchToProject(i), project: true })),
 ]
 
 function openSearch() {
@@ -37,21 +37,26 @@ function openSearch() {
   if (s.search) A.focusActive()
 }
 
-// Where the key went: a terminal taking input (not in its normal mode), or an editor in Vim's
-// insert mode.
+// Whether the key went to a terminal taking input (not in its normal mode).
 function inTerminal(target: EventTarget | null) {
   if (!(target instanceof Element && target.closest('.xterm'))) return false
   const tab = S.activeTab()
   return pane(tab && S.focusedPane(tab))?.shellInput?.() ?? true
 }
 
-function inVimInsert() {
-  const tab = S.activeTab()
-  return Boolean(tab && pane(S.focusedPane(tab))?.vimInsert?.())
-}
-
 function onKeyDown(e: KeyboardEvent) {
   if (isDialogOpen() || e.altKey) return
+  // Esc closes search and the palette wherever the focus is (their preview, say).
+  if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    const s = S.get()
+    if (s.search || s.palette) {
+      e.preventDefault()
+      e.stopPropagation()
+      S.set({ search: null, palette: null, previewTheme: null })
+      A.focusActive()
+    }
+    return
+  }
   const mac = S.isMac()
   const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
   if (!mod) return
@@ -59,12 +64,11 @@ function onKeyDown(e: KeyboardEvent) {
   const switching = S.get().projects.length > 1
   if (!connected && !switching) return
 
-  // A shortcut with Shift if there is one, else (off macOS) Ctrl+Shift+<key> stands in for
-  // Ctrl+<key>, and always works.
+  // A shortcut with Shift if there is one, else (off macOS, outside a terminal's input)
+  // Ctrl+Shift+<key> stands in for Ctrl+<key>.
   let b = bindings.find((x) => x.code === e.code && Boolean(x.shift) === e.shiftKey)
-  if (!b && !mac && e.shiftKey) b = bindings.find((x) => x.code === e.code && !x.shift)
+  if (!b && !mac && e.shiftKey && !inTerminal(e.target)) b = bindings.find((x) => x.code === e.code && !x.shift)
   if (!b || (!connected && !b.project)) return
-  if (!mac && !e.shiftKey && !b.always && (inTerminal(e.target) || inVimInsert())) return
   e.preventDefault()
   e.stopPropagation()
   b.run()

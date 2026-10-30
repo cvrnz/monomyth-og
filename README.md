@@ -44,15 +44,17 @@ command) opens another on the connect screen, a middle click or `Disconnect` clo
 Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them. This works with the Node server
 (`scripts/dev.sh`); the desktop app's Go backend still has a single connection.
 
-On Windows, plain Ctrl shortcuts are left to the shell inside terminals and to Vim's insert
-mode (so Ctrl+W, Ctrl+L and the rest keep working there); use Ctrl+Shift+<key> instead.
-Ctrl+C copies selected terminal text and Ctrl+V pastes. Selecting text in a terminal copies it.
+Shortcuts work everywhere, Vim's insert mode and terminals included. On Windows, Ctrl+Shift+<key>
+also works as Ctrl+<key>, except in a terminal, where it sends Ctrl+<key> to the shell instead
+(Ctrl+Shift+C for Ctrl+C, Ctrl+Shift+W to delete a word, ...). Esc closes search and the command
+palette wherever the focus is. Ctrl+C copies selected terminal text (and is Ctrl+C otherwise),
+Ctrl+V pastes. Selecting text in a terminal copies it.
 
 In a terminal, Esc Esc switches to normal mode, as in nvim (a single Esc still goes to the
 shell): `h`/`j`/`k`/`l`, `w`/`b`/`e`, `0`/`^`/`$`, `gg`/`G`, `H`/`M`/`L` and Ctrl+U/D/B/F/E/Y
 move through the output and scrollback, `v`/`V` select, `y` copies (`yy` the line), `/` and
 `?` search (`n`/`N` repeat), `:` opens the command palette. `i`, `a` or Enter goes back to
-the shell. The app's Ctrl shortcuts work in normal mode without Shift.
+the shell.
 
 The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `ToggleVim`,
 `FontSize 15`, `MaxColumns 100`, `Reconnect`, `NewProject`, `Disconnect`, ...) and, in a file with Vim
