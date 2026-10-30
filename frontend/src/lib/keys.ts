@@ -19,7 +19,7 @@ const bindings: Binding[] = [
   { code: 'KeyP', run: () => openPalette() },
   { code: 'KeyF', run: () => openSearch() },
   { code: 'KeyG', run: () => A.openScm() },
-  { code: 'KeyE', run: () => A.toggleExplorer() },
+  { code: 'KeyE', run: () => A.openExplorer() },
   { code: 'KeyT', run: () => A.openTerminal() },
   { code: 'Backslash', run: () => A.splitTerminal('below') },
   { code: 'Backslash', shift: true, run: () => A.splitTerminal('right') },
@@ -33,13 +33,13 @@ const bindings: Binding[] = [
 
 function openPalette() {
   const s = S.get()
-  S.set({ palette: s.palette ? null : { mode: 'commands' }, previewTheme: null, search: null, explorer: false })
+  S.set({ palette: s.palette ? null : { mode: 'commands' }, previewTheme: null, search: null })
   if (s.palette) A.focusActive()
 }
 
 function openSearch() {
   const s = S.get()
-  S.set({ search: s.search ? null : { kind: 'files', text: '' }, palette: null, explorer: false })
+  S.set({ search: s.search ? null : { kind: 'files', text: '' }, palette: null })
   if (s.search) A.focusActive()
 }
 

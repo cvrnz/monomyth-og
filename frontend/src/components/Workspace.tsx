@@ -1,5 +1,5 @@
 // The connected window: project tabs and tab bar, one blank row, the tabs' panes, the status
-// bar; the explorer, palette and search float over it. A project that isn't connected yet
+// bar; the palette and search float over it. A project that isn't connected yet
 // shows the connect screen in place of its panes.
 //
 // Every pane of every tab of every project is a child of one element, keyed by its id, so a
@@ -17,6 +17,7 @@ import ConnectScreen from './ConnectScreen'
 import EditorPane from './EditorPane'
 import Explorer from './Explorer'
 import ScmPane from './ScmPane'
+import SqlPane from './SqlPane'
 import SearchModal from './SearchModal'
 import TerminalPane from './TerminalPane'
 import Welcome from './Welcome'
@@ -32,6 +33,10 @@ export function tabLabel(tab: S.Tab): string {
       return 'Terminal'
     case 'file':
       return tab.path ? basename(tab.path) : 'Untitled'
+    case 'explorer':
+      return 'Explorer'
+    case 'sql':
+      return tab.conn ? `SQL: ${tab.conn}` : 'SQL'
   }
 }
 
@@ -197,6 +202,10 @@ function content(tab: S.Tab, active: boolean, centered: boolean): ReactNode {
       return <ScmPane id={tab.id} active={active} />
     case 'welcome':
       return <Welcome id={tab.id} active={active} />
+    case 'explorer':
+      return <Explorer tab={tab} active={active} />
+    case 'sql':
+      return <SqlPane tab={tab} active={active} />
   }
 }
 
@@ -248,7 +257,6 @@ function Panes() {
 }
 
 export default function Workspace() {
-  const explorer = S.useStore((s) => s.explorer)
   const palette = S.useStore((s) => s.palette)
   const search = S.useStore((s) => s.search)
   const connected = S.useStore((s) => S.isConnected(s.conn))
@@ -262,7 +270,6 @@ export default function Workspace() {
       <Panes />
       {connected && <StatusBar />}
       <LostBanner />
-      {connected && explorer && <Explorer />}
       {connected && palette && <CommandPalette mode={palette.mode} initial={palette.text ?? ''} />}
       {connected && search && <SearchModal kind={search.kind} initial={search.text} />}
     </div>

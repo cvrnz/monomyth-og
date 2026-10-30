@@ -1,18 +1,19 @@
-// The file explorer (Cmd+E): a floating window over the tabs, the folder's tree on the left
-// and a preview of the selected file on the right. It opens on the current file. Hidden files
-// show; .git and .DS_Store never do (as in the nvim config's neo-tree).
+// The file explorer (Cmd+E): a tab of its own, one per project, with the folder's tree on the
+// left and a preview of the selected file on the right. It shows the file that was open when
+// it was asked for. Files open in a tab after it, and it stays open. Hidden files show; .git
+// and .DS_Store never do (as in the nvim config's neo-tree).
 //
 //   j/k ↑/↓  move          Enter/o  open file, expand or collapse folder
 //   l/→      expand        h/←      collapse, or go to the parent folder
 //   a        new file (end with / for a folder)
 //   r        rename/move   d        delete     y  copy path     R  refresh
-//   Esc/q    close
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { agent, type Entry } from '../lib/agent'
-import { focusActive, openFile, root as rootPath } from '../lib/actions'
+import { agentFor, type Entry } from '../lib/agent'
+import { openFile } from '../lib/actions'
 import { copyText, errorText } from '../lib/bridge'
 import { choose, prompt, toast } from '../lib/dialogs'
 import { languageFor, monaco } from '../lib/monaco'
+import { register } from '../lib/panes'
 import { dirname, isInside, join, pretty } from '../lib/paths'
 import * as S from '../lib/store'
 
@@ -20,9 +21,20 @@ const neverShow = new Set(['.git', '.DS_Store'])
 
 type Node = { path: string; name: string; dir: boolean; link: boolean; depth: number }
 
-export default function Explorer() {
-  const root = rootPath()
-  const hello = S.useStore((s) => (s.conn.state === 'connected' || s.conn.state === 'lost' ? s.conn.hello : null))
+type Props = { tab: S.ExplorerTab; active: boolean }
+
+// Shown once its project is connected (the tree is the connected folder's).
+export default function Explorer(props: Props) {
+  const hello = S.useProject((p) => (S.isConnected(p.conn) ? p.conn.hello : null))
+  if (!hello) return null
+  return <Tree key={hello.root} {...props} root={hello.root} home={hello.home} />
+}
+
+function Tree({ tab, active, root, home }: Props & { root: string; home: string }) {
+  // This pane's project, which needn't be the current one.
+  const project = S.useProjectId()
+  const agent = useMemo(() => agentFor(project), [project])
+  const reveal = tab.reveal
   const [children, setChildren] = useState<Map<string, Entry[]>>(new Map())
   const [expanded, setExpanded] = useState<Set<string>>(new Set([root]))
   const [selected, setSelected] = useState<string>(root)
@@ -41,25 +53,39 @@ export default function Explorer() {
       setError(errorText(err))
       return []
     }
-  }, [])
+  }, [agent])
 
-  // Open on the current file: its folders expanded, it selected.
+  // Show the file it was asked to: its folders expanded, it selected.
   useEffect(() => {
-    const tab = S.activeTab()
-    const current = tab?.kind === 'file' ? tab.path : null
     const dirs = [root]
-    if (current && isInside(current, root) && current !== root) {
-      for (let d = dirname(current); d !== root && isInside(d, root); d = dirname(d)) dirs.push(d)
+    if (reveal && isInside(reveal, root) && reveal !== root) {
+      for (let d = dirname(reveal); d !== root && isInside(d, root); d = dirname(d)) dirs.push(d)
     }
-    setExpanded(new Set(dirs))
+    setExpanded((s) => new Set([...s, ...dirs]))
     Promise.all(dirs.map(load)).then(() => {
-      if (current && isInside(current, root)) setSelected(current)
+      if (reveal && isInside(reveal, root)) setSelected(reveal)
     })
-    tree.current?.focus()
-  }, [root, load])
+  }, [root, reveal, load])
+
+  useEffect(() => register(tab.id, { focus: () => tree.current?.focus() }), [tab.id])
+  useEffect(() => {
+    if (active) requestAnimationFrame(() => tree.current?.focus())
+  }, [active])
+  useEffect(() => {
+    S.setPaneStatus(tab.id, { mode: 'normal', items: [pretty(root, '', home)] })
+  }, [tab.id, root, home])
+  useEffect(
+    () => () =>
+      S.set((s) => {
+        const status = { ...s.status }
+        delete status[tab.id]
+        return { status }
+      }),
+    [tab.id],
+  )
 
   const nodes = useMemo(() => {
-    const out: Node[] = [{ path: root, name: pretty(root, '', hello?.home ?? ''), dir: true, link: false, depth: 0 }]
+    const out: Node[] = [{ path: root, name: pretty(root, '', home), dir: true, link: false, depth: 0 }]
     const walk = (dir: string, depth: number) => {
       for (const e of children.get(dir) ?? []) {
         const path = join(dir, e.name)
@@ -69,7 +95,7 @@ export default function Explorer() {
     }
     if (expanded.has(root)) walk(root, 1)
     return out
-  }, [children, expanded, root, hello])
+  }, [children, expanded, root, home])
 
   const index = Math.max(0, nodes.findIndex((n) => n.path === selected))
   const node = nodes[index]
@@ -146,16 +172,11 @@ export default function Explorer() {
       stale = true
       clearTimeout(timer)
     }
-  }, [node, children])
+  }, [node, children, agent])
 
   useEffect(() => {
     tree.current?.querySelector('.row.selected')?.scrollIntoView({ block: 'nearest' })
   }, [index])
-
-  const close = () => {
-    S.set({ explorer: false })
-    focusActive()
-  }
 
   const toggle = async (n: Node, open?: boolean) => {
     const isOpen = expanded.has(n.path)
@@ -172,10 +193,7 @@ export default function Explorer() {
 
   const activate = (n: Node) => {
     if (n.dir) toggle(n)
-    else {
-      S.set({ explorer: false })
-      openFile(n.path)
-    }
+    else openFile(n.path)
   }
 
   // The folder new files go in: the selected folder, or the selected file's.
@@ -196,10 +214,7 @@ export default function Explorer() {
     }
     await reloadAround(path)
     if (isDir) setSelected(path)
-    else {
-      S.set({ explorer: false })
-      openFile(path)
-    }
+    else openFile(path)
   }
 
   // Reload the folders leading to a path and expand them, so it shows.
@@ -284,17 +299,13 @@ export default function Explorer() {
       copyText(node.path)
       toast(`Copied ${node.path}`)
     } else if (k === 'R') refresh()
-    else if (k === 'Escape' || k === 'q') close()
     else return
     e.preventDefault()
     e.stopPropagation()
   }
 
   return (
-    <>
-      <div className="floating-backdrop" onMouseDown={close} />
-      <div className="floating" style={{ inset: '10% 10%' }} onKeyDown={(e) => e.key === 'Escape' && close()}>
-        <div className="floating-title"> Explorer   {pretty(root, '', hello?.home ?? '')}</div>
+    <div className="explorer">
         <div className="explorer-body">
           <div className="explorer-tree" ref={tree} tabIndex={0} onKeyDown={onKeyDown}>
             {nodes.map((n, i) => (
@@ -319,9 +330,8 @@ export default function Explorer() {
           </div>
         </div>
         <div className="explorer-help">
-          Enter open   a new   r rename   d delete   y copy path   R refresh   Esc close
+          Enter open   a new   r rename   d delete   y copy path   R refresh
         </div>
-      </div>
-    </>
+    </div>
   )
 }

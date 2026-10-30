@@ -1,5 +1,5 @@
 // Opening where you left off: the open projects, their tabs (files with their cursors,
-// terminals, source control, splits), the current tab and project are saved in the settings
+// terminals, source control, explorers, SQL tabs with their query and connection, splits), the current tab and project are saved in the settings
 // as they change, and reopened at start. Each project reconnects; its tabs come back once it's
 // connected (to the same place). Unsaved changes and untitled files aren't kept, and
 // terminals start new shells.
@@ -27,6 +27,8 @@ function saveTab(t: S.Tab): S.SavedTab | null {
     }
     case 'terminal':
       return { kind: 'terminal', cwd: t.cwd, splits }
+    case 'sql':
+      return { kind: 'sql', conn: t.conn, text: t.text, splits }
     default:
       return { kind: t.kind, splits }
   }
@@ -50,7 +52,7 @@ function snapshot(): S.SavedSession {
         if (t.id === p.active) active = tabs.length
         tabs.push(st)
       }
-      saved = { target, tabs, active, explorer: p.explorer }
+      saved = { target, tabs, active }
     }
     if (p.id === s.project) current = projects.length
     projects.push(saved)
@@ -66,19 +68,21 @@ function openTab(t: S.SavedTab): S.Tab {
       return { id, kind: 'file', path: t.path, dirty: false, line: t.line, col: t.col, splits }
     case 'terminal':
       return { id, kind: 'terminal', cwd: t.cwd, splits }
+    case 'sql':
+      return { id, kind: 'sql', conn: t.conn, text: t.text, splits }
     default:
       return { id, kind: t.kind, splits }
   }
 }
 
 // The tabs saved for a project that just connected to target, if it's being restored there.
-export function restoredTabs(id: string, target: S.Target): Pick<S.Project, 'tabs' | 'active' | 'explorer'> | null {
+export function restoredTabs(id: string, target: S.Target): Pick<S.Project, 'tabs' | 'active'> | null {
   const saved = pending.get(id)
   if (!saved) return null
   pending.delete(id)
   if (!sameTarget(saved.target, target) || saved.tabs.length === 0) return null
   const tabs = saved.tabs.map(openTab)
-  return { tabs, active: (tabs[saved.active] ?? tabs[0]).id, explorer: saved.explorer }
+  return { tabs, active: (tabs[saved.active] ?? tabs[0]).id }
 }
 
 let last = ''

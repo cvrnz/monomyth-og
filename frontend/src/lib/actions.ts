@@ -19,13 +19,13 @@ function insertTab(tab: S.Tab) {
     const tabs = [...s.tabs]
     const i = tabs.findIndex((t) => t.id === s.active)
     tabs.splice(i + 1, 0, tab)
-    return { tabs, active: tab.id, explorer: false }
+    return { tabs, active: tab.id }
   })
 }
 
 // Swaps a tab for another in the same place (a file opening where the welcome screen was).
 function replaceTab(id: string, tab: S.Tab) {
-  S.set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? tab : t)), active: tab.id, explorer: false }))
+  S.set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? tab : t)), active: tab.id }))
 }
 
 // The welcome screen, or an untitled file with nothing typed in it.
@@ -50,7 +50,7 @@ export function openFile(path: string, line?: number, col?: number) {
   path = normalize(path)
   const existing = S.get().tabs.find((t) => t.kind === 'file' && t.path === path)
   if (existing) {
-    S.set({ active: existing.id, explorer: false })
+    S.set({ active: existing.id })
     if (line) pane(existing.id)?.reveal?.(line, col)
     focusActive()
     return
@@ -91,16 +91,29 @@ export function splitTerminal(dir: S.Splits['dir']) {
   const id = S.newId('p')
   const panes = [...(tab.splits?.panes ?? []), id]
   S.updateTab(tab.id, { splits: { dir, panes }, focus: id })
-  S.set({ explorer: false })
 }
 
 export function openScm() {
   insertTab({ id: S.newId(), kind: 'scm' })
 }
 
-export function toggleExplorer() {
-  S.set((s) => ({ explorer: !s.explorer, palette: null, search: null }))
-  if (!S.get().explorer) focusActive()
+// Cmd+E: the project's explorer tab (made the first time), showing the file that was open.
+export function openExplorer() {
+  const current = S.activeTab()
+  const reveal = current?.kind === 'file' && current.path ? current.path : undefined
+  S.set({ palette: null, search: null })
+  const existing = S.get().tabs.find((t) => t.kind === 'explorer')
+  if (existing) {
+    if (reveal) S.updateTab(existing.id, { reveal })
+    activate(existing.id)
+    return
+  }
+  insertTab({ id: S.newId(), kind: 'explorer', reveal })
+}
+
+// A SQL tab, connected to a saved connection if one's named.
+export function openSql(conn?: string) {
+  insertTab({ id: S.newId(), kind: 'sql', conn })
 }
 
 export function cycleTab(step: number) {

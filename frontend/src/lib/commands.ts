@@ -54,19 +54,25 @@ export const commands: Command[] = [
       toast(vim ? 'Vim keybindings on' : 'Vim keybindings off')
     },
   },
-  { name: 'Explorer', desc: 'Toggle file explorer', keys: 'E', run: () => A.toggleExplorer() },
+  { name: 'Explorer', desc: 'File explorer', keys: 'E', run: () => A.openExplorer() },
+  {
+    name: 'Sql',
+    desc: 'Query a database in a new tab (PostgreSQL, MySQL, SQL Server, SQLite)',
+    aliases: ['SQL', 'Database', 'DB', 'sql', 'db'],
+    run: (args) => A.openSql(args.trim() || undefined),
+  },
   {
     name: 'Search',
     desc: 'Search file names',
     keys: 'F',
     aliases: ['Files', 'Find'],
-    run: (args) => S.set({ search: { kind: 'files', text: args.trim() }, palette: null, explorer: false }),
+    run: (args) => S.set({ search: { kind: 'files', text: args.trim() }, palette: null }),
   },
   {
     name: 'Grep',
     desc: 'Search text in files',
     aliases: ['SearchText'],
-    run: (args) => S.set({ search: { kind: 'text', text: args.trim() }, palette: null, explorer: false }),
+    run: (args) => S.set({ search: { kind: 'text', text: args.trim() }, palette: null }),
   },
   { name: 'SourceControl', desc: 'Source control', keys: 'G', aliases: ['Git'], run: () => A.openScm() },
   { name: 'Terminal', desc: 'Terminal in new tab', keys: 'T', aliases: ['terminal', 'term'], run: () => A.openTerminal() },

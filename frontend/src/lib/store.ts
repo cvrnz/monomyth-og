@@ -19,6 +19,8 @@ export type Settings = {
   fontFamily: string
   ocPath?: string
   recents: Target[]
+  // Databases saved in SQL tabs, passwords included.
+  sqlConnections?: SqlConnection[]
   // What was open when the app last closed, reopened at start (lib/session.ts).
   session?: SavedSession
 }
@@ -30,9 +32,11 @@ export type SavedTab = (
   | { kind: 'terminal'; cwd: string }
   | { kind: 'scm' }
   | { kind: 'welcome' }
+  | { kind: 'explorer' }
+  | { kind: 'sql'; conn?: string; text?: string }
 ) & { splits?: { dir: Splits['dir']; count: number } }
 
-export type SavedProject = { target: Target; tabs: SavedTab[]; active: number; explorer: boolean }
+export type SavedProject = { target: Target; tabs: SavedTab[]; active: number }
 export type SavedSession = { projects: SavedProject[]; current: number }
 
 export const defaultSettings: Settings = {
@@ -45,6 +49,23 @@ export const defaultSettings: Settings = {
   recents: [],
 }
 
+export type SqlEngine = 'postgres' | 'mysql' | 'mssql' | 'sqlite'
+
+// A database a SQL tab connects to (from this computer), saved by name. SQLite uses file;
+// the others the rest.
+export type SqlConnection = {
+  name: string
+  engine: SqlEngine
+  host?: string
+  port?: number
+  user?: string
+  password?: string
+  database?: string
+  file?: string
+  ssl?: boolean
+  trustCert?: boolean
+}
+
 // Terminals split off beside a tab's content (Cmd+\ below, Cmd+Shift+\ to the right). Each
 // pane has its own id; the tab's own content is the pane with the tab's id.
 export type Splits = { dir: 'below' | 'right'; panes: string[] }
@@ -54,7 +75,11 @@ export type FileTab = TabBase & { kind: 'file'; path: string | null; dirty: bool
 export type TerminalTab = TabBase & { kind: 'terminal'; cwd: string }
 export type ScmTab = TabBase & { kind: 'scm' }
 export type WelcomeTab = TabBase & { kind: 'welcome' }
-export type Tab = FileTab | TerminalTab | ScmTab | WelcomeTab
+// The project's files; reveal is the file to show (the one that was open when it was asked for).
+export type ExplorerTab = TabBase & { kind: 'explorer'; reveal?: string }
+// conn names the saved connection it uses; text is what's typed in it.
+export type SqlTab = TabBase & { kind: 'sql'; conn?: string; text?: string }
+export type Tab = FileTab | TerminalTab | ScmTab | WelcomeTab | ExplorerTab | SqlTab
 
 export type Connection =
   | { state: 'idle'; error?: string }
@@ -72,16 +97,15 @@ export type Project = {
   conn: Connection
   tabs: Tab[]
   active: string | null
-  explorer: boolean
   // Counts connections to the agent: shells opened under an earlier one are gone.
   session: number
 }
 
-const projectKeys = ['conn', 'tabs', 'active', 'explorer', 'session'] as const
+const projectKeys = ['conn', 'tabs', 'active', 'session'] as const
 type ProjectFields = Pick<Project, (typeof projectKeys)[number]>
 
 function blankProject(id: string): Project {
-  return { id, conn: { state: 'idle' }, tabs: [], active: null, explorer: false, session: 0 }
+  return { id, conn: { state: 'idle' }, tabs: [], active: null, session: 0 }
 }
 
 // The current project's fields are also at the top of the state (conn, tabs, active, ...), so
@@ -95,7 +119,6 @@ export type State = {
   conn: Connection
   tabs: Tab[]
   active: string | null
-  explorer: boolean
   palette: null | { mode: 'commands' | 'themes'; text?: string }
   search: null | { kind: 'files' | 'text'; text: string }
   status: Record<string, PaneStatus>
@@ -115,7 +138,6 @@ let state: State = {
   conn: { state: 'idle' },
   tabs: [],
   active: null,
-  explorer: false,
   palette: null,
   search: null,
   status: {},
@@ -133,7 +155,7 @@ export function set(update: Partial<State> | ((s: State) => Partial<State>)) {
   const patch = typeof update === 'function' ? update(state) : update
   const next = { ...state, ...patch }
   if (projectKeys.some((k) => k in patch)) {
-    const fields: ProjectFields = { conn: next.conn, tabs: next.tabs, active: next.active, explorer: next.explorer, session: next.session }
+    const fields: ProjectFields = { conn: next.conn, tabs: next.tabs, active: next.active, session: next.session }
     next.projects = next.projects.map((p) => (p.id === next.project ? { ...p, ...fields } : p))
   }
   state = next
@@ -188,7 +210,7 @@ export function projectOfTab(id: string): string | undefined {
 export function switchProject(id: string) {
   const p = project(id)
   if (!p || id === state.project) return
-  set({ project: id, conn: p.conn, tabs: p.tabs, active: p.active, explorer: p.explorer, session: p.session, palette: null, search: null })
+  set({ project: id, conn: p.conn, tabs: p.tabs, active: p.active, session: p.session, palette: null, search: null })
 }
 
 // A new project after the others, made current (it starts on the connect screen).
@@ -214,7 +236,7 @@ export function removeProject(id: string) {
 }
 
 function fieldsOf(p: Project): ProjectFields {
-  return { conn: p.conn, tabs: p.tabs, active: p.active, explorer: p.explorer, session: p.session }
+  return { conn: p.conn, tabs: p.tabs, active: p.active, session: p.session }
 }
 
 export function isConnected(c: Connection): c is Extract<Connection, { state: 'connected' | 'lost' }> {
