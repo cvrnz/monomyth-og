@@ -1,8 +1,8 @@
-// Source control, like the nvim config's: a sidebar with two tabs, Repos (every git repo in
-// the folder, its branch, commits to pull and push, and whether it has changes) and Changes
+// Source control, like the nvim config's: a sidebar with two lists, Repos (every git repo in
+// the folder, its branch, commits to pull and push, and whether it has changes) above Changes
 // (the selected repo's changed files, under a sync button). Moving through Changes shows a
-// side-by-side diff on the right. Tab switches between the lists; Enter picks a repo, runs
-// the sync button, or opens a file.
+// side-by-side diff on the right. Tab moves between the lists; Enter picks a repo, runs the
+// sync button, or opens a file.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { agentFor, type Change, type Repo } from '../lib/agent'
 import { openFile } from '../lib/actions'
@@ -148,7 +148,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
   }, [repos, repo, hello])
 
   const changeRows = useMemo((): Row[] => {
-    if (!repo) return [{ text: <span className="dim">Pick a repo in Repos</span>, width: 20 }]
+    if (!repo) return [{ text: <span className="dim">Pick a repo above</span>, width: 17 }]
     const rows: Row[] = []
     if (syncRow) rows.push(syncRow, { text: '', width: 0 })
     for (const c of files) {
@@ -168,12 +168,19 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     return rows
   }, [repo, files, syncRow])
 
-  const rows = view === 'repos' ? repoRows : changeRows
   // Only rows with something on them can be selected.
-  const selectable = rows.map((r, i) => (r.item ? i : -1)).filter((i) => i >= 0)
-  const cursor = selectable.includes(sel[view]) ? sel[view] : (selectable[0] ?? -1)
+  const selectableIn = (rows: Row[]) => rows.map((r, i) => (r.item ? i : -1)).filter((i) => i >= 0)
+  const cursorIn = (rows: Row[], at: number) => {
+    const ok = selectableIn(rows)
+    return ok.includes(at) ? at : (ok[0] ?? -1)
+  }
+  const cursors = { repos: cursorIn(repoRows, sel.repos), changes: cursorIn(changeRows, sel.changes) }
+  const rows = view === 'repos' ? repoRows : changeRows
+  const selectable = selectableIn(rows)
+  const cursor = cursors[view]
   const entry = cursor >= 0 ? rows[cursor].item : undefined
-  const shownChange = view === 'changes' ? entry?.change : undefined
+  const changeCursor = cursors.changes
+  const shownChange = changeCursor >= 0 ? changeRows[changeCursor].item?.change : undefined
 
   // Sidebar as wide as its widest line (both lists), up to half the pane.
   const sideWidth = Math.max(18, ...repoRows.map((r) => r.width), ...changeRows.map((r) => r.width)) + 3
@@ -333,47 +340,62 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     e.preventDefault()
   }
 
-  // Keep the selected row in view.
+  // Keep the selected rows in view.
   useEffect(() => {
-    side.current?.querySelector('.row.selected')?.scrollIntoView({ block: 'nearest' })
-  }, [cursor, view])
+    side.current?.querySelectorAll('.row.selected').forEach((r) => r.scrollIntoView({ block: 'nearest' }))
+  }, [cursors.repos, cursors.changes])
 
   const label = (c: Change | undefined, which: 'old' | 'new') =>
     c ? ` ${which === 'old' ? (c.old ?? c.path) : c.path}  (${which === 'old' ? 'last commit' : 'working tree'})` : ' '
 
-  return (
-    <div className="scm">
-      <div className="scm-side" ref={side} tabIndex={0} onKeyDown={onKeyDown} style={{ width: `${sideWidth}ch` }}>
-        <div className="scm-tabs">
-          <span className={view === 'repos' ? 'on' : ''} onMouseDown={() => setView('repos')}>
-            Repos
-          </span>{' '}
-          <span className={view === 'changes' ? 'on' : ''} onMouseDown={() => setView('changes')}>
-            Changes
-          </span>
-        </div>
-        <div className="row" />
-        {rows.map((r, i) => (
+  const list = (which: 'repos' | 'changes', title: React.ReactNode, items: Row[]) => (
+    <div className={`scm-list scm-${which} ${view === which ? 'on' : ''}`}>
+      <div className="scm-title" onMouseDown={() => setView(which)}>
+        {title}
+      </div>
+      <div className="scm-rows">
+        {items.map((r, i) => (
           <div
             key={i}
-            className={`row ${i === cursor ? 'selected' : ''}`}
-            onMouseDown={() => r.item && setSel((s) => ({ ...s, [view]: i }))}
+            className={`row ${i === cursors[which] ? 'selected' : ''}`}
+            onMouseDown={() => {
+              setView(which)
+              if (r.item) setSel((s) => ({ ...s, [which]: i }))
+            }}
             onDoubleClick={() => choose(r.item)}
-            onClick={() => r.item && view === 'changes' && r.item.sync && runSync()}
+            onClick={() => r.item?.sync && runSync()}
           >
             {r.text}
           </div>
         ))}
       </div>
-      <div className="scm-diff">
-        <div className="scm-labels">
-          <div>{label(shownChange, 'old')}</div>
-          <div>{label(shownChange, 'new')}</div>
+    </div>
+  )
+
+  return (
+    <div className="scm">
+      <div className="scm-body">
+        <div className="scm-side" ref={side} tabIndex={0} onKeyDown={onKeyDown} style={{ width: `${sideWidth}ch` }}>
+          {list('repos', 'Repos', repoRows)}
+          {list(
+            'changes',
+            <>
+              Changes{repo && <span className="scm-repo">   {repo.name}</span>}
+            </>,
+            changeRows,
+          )}
         </div>
-        <div className="scm-editor">
-          <div ref={diffHost} style={{ position: 'absolute', inset: 0, visibility: shownChange ? undefined : 'hidden' }} />
+        <div className="scm-diff">
+          <div className="scm-labels">
+            <div>{label(shownChange, 'old')}</div>
+            <div>{label(shownChange, 'new')}</div>
+          </div>
+          <div className="scm-editor">
+            <div ref={diffHost} style={{ position: 'absolute', inset: 0, display: shownChange ? undefined : 'none' }} />
+          </div>
         </div>
       </div>
+      <div className="scm-help">Tab switch list   Enter open   R refresh</div>
     </div>
   )
 }
