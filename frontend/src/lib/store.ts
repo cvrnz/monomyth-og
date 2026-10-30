@@ -2,7 +2,13 @@
 import { useSyncExternalStore } from 'react'
 import type { Hello } from './agent'
 
-export type Target = { project: string; pod: string; workspace?: string; container: string; folder: string }
+// A container (project, pod, container), or this computer (local). folder is the folder to
+// open, or empty for the default.
+export type Target = { local?: boolean; project: string; pod: string; workspace?: string; container: string; folder: string }
+
+export function localTarget(folder: string): Target {
+  return { local: true, project: '', pod: '', container: '', folder }
+}
 
 export type Settings = {
   theme: string

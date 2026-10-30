@@ -164,7 +164,10 @@ func (o Oc) Pods(project string) ([]Pod, error) {
 	return pods, nil
 }
 
+// Where to connect: a container (project, pod, container), or this computer (Local). Folder
+// is the folder to open, or empty for the default.
 type Target struct {
+	Local     bool   `json:"local,omitempty"`
 	Project   string `json:"project"`
 	Pod       string `json:"pod"`
 	Container string `json:"container"`
