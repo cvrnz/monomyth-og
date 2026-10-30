@@ -5,13 +5,13 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "editor"
+    !define INFO_PROJECTNAME "Monomyth"
 !endif
 !ifndef INFO_COMPANYNAME
     !define INFO_COMPANYNAME "Carlos Hernandez"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "Editor"
+    !define INFO_PRODUCTNAME "Monomyth"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "0.1.0"

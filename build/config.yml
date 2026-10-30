@@ -6,8 +6,8 @@ version: '3'
 # This information is used to generate the build assets.
 info:
   companyName: "Carlos Hernandez" # The name of the company
-  productName: "Editor" # The name of the application
-  productIdentifier: "com.carlos.editor" # The unique product identifier
+  productName: "Monomyth" # The name of the application
+  productIdentifier: "com.carlos.monomyth" # The unique product identifier
   description: "Edits files in an OpenShift or Dev Spaces container" # The application description
   copyright: "(c) 2026, Carlos Hernandez" # Copyright text
   comments: "Edits files in an OpenShift or Dev Spaces container" # Comments

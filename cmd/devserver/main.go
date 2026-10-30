@@ -35,7 +35,7 @@ func main() {
 
 	a := app.New()
 	a.LocalAgent = *agent
-	a.SettingsPath = filepath.Join(os.TempDir(), "editor-devserver-settings.json")
+	a.SettingsPath = filepath.Join(os.TempDir(), "monomyth-devserver-settings.json")
 
 	var mu sync.Mutex
 	subscribers := map[chan []byte]bool{}

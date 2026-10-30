@@ -186,8 +186,8 @@ func (t Target) execArgs(cmd ...string) []string {
 // architecture, the folder, and which of the given agent hashes are already there.
 const probeScript = `
 m=$(uname -m)
-d="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/editor-agent"
-if ! mkdir -p "$d" 2>/dev/null || [ ! -w "$d" ]; then d="/tmp/editor-agent-$(id -u)"; mkdir -p "$d" || exit 1; fi
+d="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/monomyth-agent"
+if ! mkdir -p "$d" 2>/dev/null || [ ! -w "$d" ]; then d="/tmp/monomyth-agent-$(id -u)"; mkdir -p "$d" || exit 1; fi
 echo "$m"
 echo "$d"
 for h in "$@"; do [ -x "$d/agent-$h" ] && echo "have $h"; done

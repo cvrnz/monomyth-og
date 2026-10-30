@@ -1,6 +1,6 @@
-# Editor
+# Monomyth
 
-A desktop editor for macOS and Windows, for files on your computer or inside an OpenShift /
+Monomyth is a desktop editor for macOS and Windows, for files on your computer or inside an OpenShift /
 Dev Spaces container. For a container it uses your `oc` login: pick a project, pod and
 container, and the app uploads a small agent into it (`oc exec`) that reads and writes files,
 runs shells and git. For local files the same agent runs inside the app. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
@@ -54,8 +54,8 @@ highlighted command.
 - **Welcome**: Tab shows another piece of art; `i`, `a` or `o` starts a new file.
 
 Settings (theme, Vim on/off, line numbers, font, centered width, the path to `oc`, recent
-connections) are saved in the user config folder (`~/Library/Application Support/editor` on
-macOS, `%AppData%\editor` on Windows).
+connections) are saved in the user config folder (`~/Library/Application Support/monomyth`
+on macOS, `%AppData%\monomyth` on Windows).
 
 If the connection drops, the app reconnects once by itself and otherwise shows a Reconnect
 button; open files and unsaved changes stay, and terminals start a new shell when typed in.
@@ -71,7 +71,7 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 Then, on the platform you're building for:
 
 ```sh
-wails3 build          # bin/editor on macOS, bin/editor.exe on Windows
+wails3 build          # bin/Monomyth on macOS, bin/Monomyth.exe on Windows
 wails3 package        # the macOS .app bundle / the Windows installer
 ```
 

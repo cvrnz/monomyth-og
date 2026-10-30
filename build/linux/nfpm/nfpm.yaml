@@ -3,7 +3,7 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "editor"
+name: "monomyth"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
@@ -17,12 +17,12 @@ license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/editor"
-    dst: "/usr/local/bin/editor"
+  - src: "./bin/Monomyth"
+    dst: "/usr/local/bin/monomyth"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/editor.png"
-  - src: "./build/linux/editor.desktop"
-    dst: "/usr/share/applications/editor.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/monomyth.png"
+  - src: "./build/linux/monomyth.desktop"
+    dst: "/usr/share/applications/monomyth.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

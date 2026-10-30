@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=Editor
+Name=Monomyth
 Comment=Edits files in an OpenShift or Dev Spaces container
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/editor %u
+Exec=/usr/local/bin/monomyth %u
 Terminal=false
 Type=Application
-Icon=editor
+Icon=monomyth
 Categories=Utility;
-StartupWMClass=editor
+StartupWMClass=monomyth
 
  

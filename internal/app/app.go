@@ -40,7 +40,7 @@ func New() *App {
 	if err != nil {
 		dir = os.TempDir()
 	}
-	return &App{SettingsPath: filepath.Join(dir, "editor", "settings.json"), Emit: func(string, any) {}, QuitFn: func() {}}
+	return &App{SettingsPath: filepath.Join(dir, "monomyth", "settings.json"), Emit: func(string, any) {}, QuitFn: func() {}}
 }
 
 // Settings returns the saved settings as JSON (the window owns their shape), or "{}".
