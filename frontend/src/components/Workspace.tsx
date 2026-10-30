@@ -1,16 +1,19 @@
-// The connected window: tab bar, one blank row, the tabs' panes, the status bar; the explorer,
-// palette and search float over it.
+// The connected window: project tabs and tab bar, one blank row, the tabs' panes, the status
+// bar; the explorer, palette and search float over it. A project that isn't connected yet
+// shows the connect screen in place of its panes.
 //
-// Every pane of every tab is a child of one element, keyed by its id, so a pane keeps its
-// editor or shell when tabs are rearranged or a split terminal takes over its tab. Panes of
-// other tabs are hidden, not unmounted.
+// Every pane of every tab of every project is a child of one element, keyed by its id, so a
+// pane keeps its editor or shell when tabs are rearranged, a split terminal takes over its tab,
+// or another project is switched to. Panes of other tabs and projects are hidden, not unmounted.
 import { Button } from '@heroui/react'
 import type { CSSProperties, ReactNode } from 'react'
 import * as A from '../lib/actions'
-import { reconnect } from '../lib/connection'
+import { disconnect, newProject, reconnect } from '../lib/connection'
+import { keyLabel } from '../lib/commands'
 import { basename } from '../lib/paths'
 import * as S from '../lib/store'
 import CommandPalette from './CommandPalette'
+import ConnectScreen from './ConnectScreen'
 import EditorPane from './EditorPane'
 import Explorer from './Explorer'
 import ScmPane from './ScmPane'
@@ -30,6 +33,68 @@ export function tabLabel(tab: S.Tab): string {
     case 'file':
       return tab.path ? basename(tab.path) : 'Untitled'
   }
+}
+
+export function projectLabel(p: S.Project): string {
+  const c = p.conn
+  if (c.state === 'idle') return 'New project'
+  const t = c.target
+  if (t.local) return basename(t.folder || (S.isConnected(c) ? c.hello.root : '')) || 'Folder'
+  return t.workspace || t.pod
+}
+
+function projectDetails(p: S.Project): string {
+  const c = p.conn
+  if (c.state === 'idle') return 'Not connected'
+  const t = c.target
+  const where = t.local ? `this computer · ${S.isConnected(c) ? c.hello.root : t.folder}` : `${t.project} · ${t.container} · ${S.isConnected(c) ? c.hello.root : t.folder || '~'}`
+  const state = c.state === 'connecting' ? ' (connecting)' : c.state === 'lost' ? ' (disconnected)' : ''
+  return where + state
+}
+
+// The projects open in the window, left of the tabs: Cmd+1, Cmd+2, ... switch between them.
+function ProjectBar() {
+  const projects = S.useStore((s) => s.projects)
+  const current = S.useStore((s) => s.project)
+  return (
+    <div className="projectbar">
+      {projects.map((p, i) => {
+        const dirty = p.tabs.some((t) => t.kind === 'file' && t.dirty)
+        return (
+          <div
+            key={p.id}
+            className={`project ${p.id === current ? 'active' : ''} ${p.conn.state}`}
+            title={`${projectDetails(p)}${i < 9 ? `\n${keyLabel(String(i + 1))}` : ''}`}
+            onMouseDown={(e) => {
+              if (e.button === 1) {
+                e.preventDefault()
+                A.switchToProject(i)
+                disconnect()
+              } else if (e.button === 0) {
+                e.preventDefault()
+                A.switchToProject(i)
+              }
+            }}
+          >
+            {i < 9 && <span className="num">{i + 1} </span>}
+            {projectLabel(p)}
+            {dirty && <span className="dot"> ●</span>}
+          </div>
+        )
+      })}
+      <div
+        className="project add"
+        title="Open another container or folder"
+        onMouseDown={(e) => {
+          if (e.button !== 0) return
+          e.preventDefault()
+          newProject()
+        }}
+      >
+        +
+      </div>
+    </div>
+  )
 }
 
 function TabBar() {
@@ -137,15 +202,14 @@ function content(tab: S.Tab, active: boolean, centered: boolean): ReactNode {
   }
 }
 
-function Panes() {
-  const tabs = S.useStore((s) => s.tabs)
-  const active = S.useStore((s) => s.active)
-  const root = S.useStore((s) => (s.conn.state === 'connected' || s.conn.state === 'lost' ? s.conn.hello.root : '/'))
+function ProjectPanes({ project, current }: { project: S.Project; current: boolean }) {
+  const { tabs, active } = project
+  const root = S.isConnected(project.conn) ? project.conn.hello.root : '/'
   return (
-    <div className="panes">
+    <S.ProjectContext.Provider value={project.id}>
       {tabs.flatMap((tab) => {
         const ids = [tab.id, ...(tab.splits?.panes ?? [])]
-        const shown = tab.id === active
+        const shown = current && tab.id === active
         const focused = S.focusedPane(tab)
         return ids.map((id, i) => (
           <div
@@ -163,6 +227,24 @@ function Panes() {
           </div>
         ))
       })}
+    </S.ProjectContext.Provider>
+  )
+}
+
+function Panes() {
+  const projects = S.useStore((s) => s.projects)
+  const current = S.useStore((s) => s.project)
+  const connected = S.useStore((s) => S.isConnected(s.conn))
+  return (
+    <div className="panes">
+      {projects.map((p) => (
+        <ProjectPanes key={p.id} project={p} current={p.id === current} />
+      ))}
+      {!connected && (
+        <div className="connect-layer">
+          <ConnectScreen key={current} />
+        </div>
+      )}
     </div>
   )
 }
@@ -171,16 +253,20 @@ export default function Workspace() {
   const explorer = S.useStore((s) => s.explorer)
   const palette = S.useStore((s) => s.palette)
   const search = S.useStore((s) => s.search)
+  const connected = S.useStore((s) => S.isConnected(s.conn))
   return (
     <div className="workspace">
-      <TabBar />
+      <div className="topbar">
+        <ProjectBar />
+        <TabBar />
+      </div>
       <div className="tabbar-spacer" />
       <Panes />
-      <StatusBar />
+      {connected && <StatusBar />}
       <LostBanner />
-      {explorer && <Explorer />}
-      {palette && <CommandPalette mode={palette.mode} initial={palette.text ?? ''} />}
-      {search && <SearchModal kind={search.kind} initial={search.text} />}
+      {connected && explorer && <Explorer />}
+      {connected && palette && <CommandPalette mode={palette.mode} initial={palette.text ?? ''} />}
+      {connected && search && <SearchModal kind={search.kind} initial={search.text} />}
     </div>
   )
 }

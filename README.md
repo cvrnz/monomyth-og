@@ -24,7 +24,7 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 
 | Shortcut | Action |
 |----------|--------|
-| W | Close the tab or split (asks about unsaved changes; closing the last tab quits) |
+| W | Close the tab or split (asks about unsaved changes; closing the last tab closes the project, or quits when it's the only one) |
 | S | Save (asks for a path for a new file) |
 | N | New tab |
 | P | Search file names; Tab switches to searching text |
@@ -36,6 +36,13 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 | H / L | Previous / next tab |
 | J / K | Next / previous split |
 | Shift+P | Command palette (also `:` in a file, the welcome screen and source control) |
+| 1 … 9 | Switch to the first … ninth project |
+
+Several projects (containers or local folders) can be open in one window, each with its own
+connection, tabs and terminals. They're listed left of the tabs: `+` (or the `NewProject`
+command) opens another on the connect screen, a middle click or `Disconnect` closes one, and
+Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them. This works with the Node server
+(`scripts/dev.sh`); the desktop app's Go backend still has a single connection.
 
 On Windows, plain Ctrl shortcuts are left to the shell inside terminals and to Vim's insert
 mode (so Ctrl+W, Ctrl+L and the rest keep working there); use Ctrl+Shift+<key> instead.
@@ -48,7 +55,7 @@ move through the output and scrollback, `v`/`V` select, `y` copies (`yy` the lin
 the shell. The app's Ctrl shortcuts work in normal mode without Shift.
 
 The command palette runs the app's commands (`Themes`, `ToggleLineNumbers`, `ToggleVim`,
-`FontSize 15`, `MaxColumns 100`, `Reconnect`, `Disconnect`, ...) and, in a file with Vim
+`FontSize 15`, `MaxColumns 100`, `Reconnect`, `NewProject`, `Disconnect`, ...) and, in a file with Vim
 keybindings, any Ex command (`w`, `e path`, `%s/a/b/g`, `10`, `sort`). Tab completes the
 highlighted command.
 

@@ -1,5 +1,5 @@
 // App state: a plain object with listeners, read in components through useStore(selector).
-import { useSyncExternalStore } from 'react'
+import { createContext, useContext, useSyncExternalStore } from 'react'
 import type { Hello } from './agent'
 
 // A container (project, pod, container), or this computer (local). folder is the folder to
@@ -51,9 +51,33 @@ export type Connection =
 // What the status bar shows for a pane: the mode on the left, details on the right.
 export type PaneStatus = { mode?: string; items: string[]; errors?: number; warnings?: number }
 
+// A place being worked on: its connection and its tabs. The window can hold several (each with
+// its own connection to an agent), switched between with Cmd+1, Cmd+2, ...
+export type Project = {
+  id: string
+  conn: Connection
+  tabs: Tab[]
+  active: string | null
+  explorer: boolean
+  // Counts connections to the agent: shells opened under an earlier one are gone.
+  session: number
+}
+
+const projectKeys = ['conn', 'tabs', 'active', 'explorer', 'session'] as const
+type ProjectFields = Pick<Project, (typeof projectKeys)[number]>
+
+function blankProject(id: string): Project {
+  return { id, conn: { state: 'idle' }, tabs: [], active: null, explorer: false, session: 0 }
+}
+
+// The current project's fields are also at the top of the state (conn, tabs, active, ...), so
+// most of the app works on "the" project; projects holds every project, the current one kept
+// in step with them.
 export type State = {
   platform: string
   settings: Settings
+  project: string
+  projects: Project[]
   conn: Connection
   tabs: Tab[]
   active: string | null
@@ -63,13 +87,17 @@ export type State = {
   status: Record<string, PaneStatus>
   // Previewing a theme in the picker, without saving it.
   previewTheme: string | null
-  // Counts connections to the agent: shells opened under an earlier one are gone.
   session: number
 }
+
+// newId never makes w0.
+const first = blankProject('w0')
 
 let state: State = {
   platform: 'darwin',
   settings: defaultSettings,
+  project: first.id,
+  projects: [first],
   conn: { state: 'idle' },
   tabs: [],
   active: null,
@@ -89,7 +117,12 @@ export function get(): State {
 
 export function set(update: Partial<State> | ((s: State) => Partial<State>)) {
   const patch = typeof update === 'function' ? update(state) : update
-  state = { ...state, ...patch }
+  const next = { ...state, ...patch }
+  if (projectKeys.some((k) => k in patch)) {
+    const fields: ProjectFields = { conn: next.conn, tabs: next.tabs, active: next.active, explorer: next.explorer, session: next.session }
+    next.projects = next.projects.map((p) => (p.id === next.project ? { ...p, ...fields } : p))
+  }
+  state = next
   listeners.forEach((l) => l())
 }
 
@@ -111,8 +144,83 @@ export function setPaneStatus(id: string, status: PaneStatus) {
   set((s) => ({ status: { ...s.status, [id]: status } }))
 }
 
+// A tab can be in a project other than the current one (a file saved after switching away).
 export function updateTab(id: string, patch: Partial<Tab>) {
-  set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? ({ ...t, ...patch } as Tab) : t)) }))
+  const pid = projectOfTab(id) ?? state.project
+  setProject(pid, (p) => ({ tabs: p.tabs.map((t) => (t.id === id ? ({ ...t, ...patch } as Tab) : t)) }))
+}
+
+export function project(id: string): Project | undefined {
+  return state.projects.find((p) => p.id === id)
+}
+
+export function currentProject(): Project {
+  return project(state.project)!
+}
+
+export function setProject(id: string, update: Partial<ProjectFields> | ((p: Project) => Partial<ProjectFields>)) {
+  const p = project(id)
+  if (!p) return
+  const patch = typeof update === 'function' ? update(p) : update
+  if (id === state.project) set(patch)
+  else set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...patch } : x)) }))
+}
+
+// The project a tab (or a terminal split off one) is in.
+export function projectOfTab(id: string): string | undefined {
+  return state.projects.find((p) => p.tabs.some((t) => t.id === id || t.splits?.panes.includes(id)))?.id
+}
+
+export function switchProject(id: string) {
+  const p = project(id)
+  if (!p || id === state.project) return
+  set({ project: id, conn: p.conn, tabs: p.tabs, active: p.active, explorer: p.explorer, session: p.session, palette: null, search: null })
+}
+
+// A new project after the others, made current (it starts on the connect screen).
+export function addProject(): string {
+  const p = blankProject(newId('w'))
+  set((s) => ({ projects: [...s.projects, p] }))
+  switchProject(p.id)
+  return p.id
+}
+
+// Drops a project; when it's the current one, the one before it (or after, for the first)
+// becomes current. The last project is replaced by a new one.
+export function removeProject(id: string) {
+  const i = state.projects.findIndex((p) => p.id === id)
+  if (i < 0) return
+  if (state.projects.length === 1) {
+    const p = blankProject(newId('w'))
+    set({ projects: [p], project: p.id, ...fieldsOf(p), palette: null, search: null, status: {} })
+    return
+  }
+  if (id === state.project) switchProject(state.projects[i === 0 ? 1 : i - 1].id)
+  set((s) => ({ projects: s.projects.filter((p) => p.id !== id) }))
+}
+
+function fieldsOf(p: Project): ProjectFields {
+  return { conn: p.conn, tabs: p.tabs, active: p.active, explorer: p.explorer, session: p.session }
+}
+
+export function isConnected(c: Connection): c is Extract<Connection, { state: 'connected' | 'lost' }> {
+  return c.state === 'connected' || c.state === 'lost'
+}
+
+// The project a component is in (its panes are rendered under a provider), so its calls go to
+// that project's agent even when another project is current.
+// What useProject sees of a project that was just removed (while its panes unmount).
+const gone = blankProject('')
+
+export const ProjectContext = createContext('')
+
+export function useProjectId(): string {
+  return useContext(ProjectContext) || state.project
+}
+
+export function useProject<T>(selector: (p: Project) => T): T {
+  const id = useProjectId()
+  return useStore((s) => selector(s.projects.find((p) => p.id === id) ?? gone))
 }
 
 export function activeTab(): Tab | undefined {

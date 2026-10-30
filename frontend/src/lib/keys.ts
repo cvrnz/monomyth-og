@@ -9,7 +9,8 @@ import { isDialogOpen } from './dialogs'
 import { pane } from './panes'
 import * as S from './store'
 
-type Binding = { code: string; shift?: boolean; run: () => void; always?: boolean }
+// project: works on the connect screen too, to switch to another project.
+type Binding = { code: string; shift?: boolean; run: () => void; always?: boolean; project?: boolean }
 
 const bindings: Binding[] = [
   { code: 'KeyW', run: () => A.closeFocused() },
@@ -26,6 +27,8 @@ const bindings: Binding[] = [
   { code: 'KeyL', run: () => A.cycleTab(1) },
   { code: 'KeyJ', run: () => A.cyclePane(1) },
   { code: 'KeyK', run: () => A.cyclePane(-1) },
+  // Cmd+1 ... Cmd+9: switch projects.
+  ...Array.from({ length: 9 }, (_, i): Binding => ({ code: `Digit${i + 1}`, run: () => A.switchToProject(i), always: true, project: true })),
 ]
 
 function openSearch() {
@@ -52,14 +55,15 @@ function onKeyDown(e: KeyboardEvent) {
   const mac = S.isMac()
   const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
   if (!mod) return
-  const connected = S.get().conn.state === 'connected' || S.get().conn.state === 'lost'
-  if (!connected) return
+  const connected = S.isConnected(S.get().conn)
+  const switching = S.get().projects.length > 1
+  if (!connected && !switching) return
 
   // A shortcut with Shift if there is one, else (off macOS) Ctrl+Shift+<key> stands in for
   // Ctrl+<key>, and always works.
   let b = bindings.find((x) => x.code === e.code && Boolean(x.shift) === e.shiftKey)
   if (!b && !mac && e.shiftKey) b = bindings.find((x) => x.code === e.code && !x.shift)
-  if (!b) return
+  if (!b || (!connected && !b.project)) return
   if (!mac && !e.shiftKey && !b.always && (inTerminal(e.target) || inVimInsert())) return
   e.preventDefault()
   e.stopPropagation()

@@ -31,6 +31,7 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
   const fontSize = S.useStore((s) => s.settings.fontSize)
   const fontFamily = S.useStore((s) => s.settings.fontFamily)
   const maxColumns = S.useStore((s) => s.settings.maxColumns)
+  const project = S.useProjectId()
 
   useEffect(() => {
     const settings = S.get().settings
@@ -58,7 +59,9 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
 
     let shell: Shell | null = null
     let state: 'starting' | 'running' | 'exited' | 'dead' = 'starting'
-    let session = S.get().session
+    // This pane's project, which needn't be the current one.
+    const proj = () => S.project(project)
+    let session = proj()?.session ?? 0
     let title = ''
     let shellName = ''
     let disposed = false
@@ -78,10 +81,10 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
 
     const start = async () => {
       state = 'starting'
-      session = S.get().session
+      session = proj()?.session ?? 0
       doFit()
       try {
-        const sh = await openShell(term.cols, term.rows, cwd, {
+        const sh = await openShell(project, term.cols, term.rows, cwd, {
           data: (bytes) => term.write(bytes),
           exit: (code) => {
             if (state !== 'running') return
@@ -105,7 +108,8 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
 
     // The connection dropped (or was restarted): the shell is gone with it.
     const unsub = S.subscribe(() => {
-      const s = S.get()
+      const s = proj()
+      if (!s) return
       if (state === 'running' && (s.session !== session || s.conn.state === 'lost')) {
         state = 'dead'
         shell = null
@@ -124,7 +128,7 @@ export default function TerminalPane({ id, tabId, cwd, active, centered }: Props
         return true
       }
       if (state === 'dead') {
-        if (S.get().conn.state === 'connected') {
+        if (proj()?.conn.state === 'connected') {
           term.reset()
           start()
         }

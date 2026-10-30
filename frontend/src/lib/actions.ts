@@ -3,6 +3,7 @@
 // new tab after it; closing the last tab quits.
 import { agent } from './agent'
 import { errorText, inWails, invoke } from './bridge'
+import { closeProject } from './connection'
 import { choose, prompt, toast } from './dialogs'
 import { pane } from './panes'
 import { basename, join, normalize } from './paths'
@@ -174,6 +175,11 @@ export async function closeTab(id: string) {
   }
   const remaining = tabs.filter((t) => t.id !== id)
   if (remaining.length === 0) {
+    // With other projects open, closing a project's last tab closes the project.
+    if (S.get().projects.length > 1) {
+      closeProject(S.get().project)
+      return
+    }
     S.set({ tabs: [], active: null })
     await quit()
     return
@@ -191,8 +197,10 @@ export async function save(as = false) {
   if (target?.save) await target.save(as)
 }
 
-export async function saveAll(): Promise<boolean> {
-  for (const tab of S.get().tabs) {
+// The current project's changed files, or every project's.
+export async function saveAll(everywhere = false): Promise<boolean> {
+  const tabs = everywhere ? S.get().projects.flatMap((p) => p.tabs) : S.get().tabs
+  for (const tab of tabs) {
     if (tab.kind === 'file' && tab.dirty) {
       if (!(await pane(tab.id)?.save?.())) return false
     }
@@ -234,14 +242,23 @@ export async function okToWrite(path: string): Promise<boolean> {
   return choice === 'replace'
 }
 
-export function dirtyCount(): number {
-  return S.get().tabs.filter((t) => t.kind === 'file' && t.dirty).length
+export function dirtyCount(everywhere = false): number {
+  const tabs = everywhere ? S.get().projects.flatMap((p) => p.tabs) : S.get().tabs
+  return tabs.filter((t) => t.kind === 'file' && t.dirty).length
+}
+
+// Cmd+1, Cmd+2, ...: the project at that place in the project tabs.
+export function switchToProject(index: number) {
+  const p = S.get().projects[index]
+  if (!p) return
+  S.switchProject(p.id)
+  focusActive()
 }
 
 // Quitting with unsaved changes asks first. In a browser (the dev server) there's no window to
 // close, so the welcome screen comes back instead.
 export async function quit() {
-  const n = dirtyCount()
+  const n = dirtyCount(true)
   if (n > 0) {
     const choice = await choose(
       n === 1 ? 'Save changes to 1 file before quitting?' : `Save changes to ${n} files before quitting?`,
@@ -253,7 +270,7 @@ export async function quit() {
       ],
     )
     if (choice === 'cancel') return
-    if (choice === 'save' && !(await saveAll())) return
+    if (choice === 'save' && !(await saveAll(true))) return
   }
   if (inWails) {
     await invoke('Quit')

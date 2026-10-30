@@ -10,7 +10,9 @@ import * as S from './lib/store'
 
 export default function App() {
   const [ready, setReady] = useState(false)
-  const conn = S.useStore((s) => s.conn.state)
+  // The workspace stays up while any project is open in it, the connect screen showing in it
+  // for a project that isn't connected yet.
+  const workspace = S.useStore((s) => S.isConnected(s.conn) || s.projects.length > 1)
   const fontFamily = S.useStore((s) => s.settings.fontFamily)
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function App() {
     // The window asks before closing while anything is unsaved.
     let dirty = false
     const unsubDirty = S.subscribe(() => {
-      const now = dirtyCount() > 0
+      const now = dirtyCount(true) > 0
       if (now !== dirty) {
         dirty = now
         invoke('SetDirty', now).catch(() => {})
@@ -51,7 +53,7 @@ export default function App() {
   if (!ready) return null
   return (
     <>
-      {conn === 'connected' || conn === 'lost' ? <Workspace /> : <ConnectScreen />}
+      {workspace ? <Workspace /> : <ConnectScreen />}
       <Dialogs />
     </>
   )

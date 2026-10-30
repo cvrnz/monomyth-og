@@ -1,7 +1,8 @@
 // Shells in the container, routed to their terminal panes. A shell can start printing before
 // term.open has answered with its id, so output for an id nobody has claimed yet is held
-// until its pane does.
-import { agent, fromBase64, onAgent, toBase64 } from './agent'
+// until its pane does. Shell ids are only unique per agent, so they're keyed by project too.
+import { agentFor, fromBase64, onAgent, toBase64 } from './agent'
+import * as S from './store'
 
 type Sink = { data: (bytes: Uint8Array) => void; exit: (code: number) => void }
 
@@ -12,18 +13,22 @@ let listening = false
 function listen() {
   if (listening) return
   listening = true
-  onAgent('term.data', (p: { id: string; data: string }) => {
+  onAgent('term.data', (p: { id: string; data: string }, project) => {
     const bytes = fromBase64(p.data)
-    const sink = sinks.get(p.id)
+    const key = keyOf(project, p.id)
+    const sink = sinks.get(key)
     if (sink) sink.data(bytes)
-    else hold(p.id).data.push(bytes)
+    else hold(key).data.push(bytes)
   })
-  onAgent('term.exit', (p: { id: string; code: number }) => {
-    const sink = sinks.get(p.id)
+  onAgent('term.exit', (p: { id: string; code: number }, project) => {
+    const key = keyOf(project, p.id)
+    const sink = sinks.get(key)
     if (sink) sink.exit(p.code)
-    else hold(p.id).exit = p.code
+    else hold(key).exit = p.code
   })
 }
+
+const keyOf = (project: string, id: string) => `${project}/${id}`
 
 function hold(id: string) {
   let h = early.get(id)
@@ -43,13 +48,15 @@ export type Shell = {
 
 const encoder = new TextEncoder()
 
-export async function openShell(cols: number, rows: number, cwd: string, sink: Sink): Promise<Shell> {
+export async function openShell(project: string, cols: number, rows: number, cwd: string, sink: Sink): Promise<Shell> {
   listen()
+  const agent = agentFor(project)
   const { id, shell } = await agent.termOpen(cols, rows, cwd)
-  sinks.set(id, sink)
-  const held = early.get(id)
+  const key = keyOf(project, id)
+  sinks.set(key, sink)
+  const held = early.get(key)
   if (held) {
-    early.delete(id)
+    early.delete(key)
     held.data.forEach((d) => sink.data(d))
     if (held.exit !== undefined) sink.exit(held.exit)
   }
@@ -88,8 +95,9 @@ export async function openShell(cols: number, rows: number, cwd: string, sink: S
       agent.termResize(id, c, r).catch(() => {})
     },
     close: () => {
-      sinks.delete(id)
-      agent.termClose(id).catch(() => {})
+      sinks.delete(key)
+      // A closed project's agent has hung up its shells already.
+      if (S.project(project)) agent.termClose(id).catch(() => {})
     },
   }
 }

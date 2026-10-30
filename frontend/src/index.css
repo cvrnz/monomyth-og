@@ -28,7 +28,7 @@ body,
   background: var(--selection);
 }
 
-/* Workspace: tab bar, a blank row, the panes, the status bar. */
+/* Workspace: project tabs and tab bar, a blank row, the panes, the status bar. */
 .workspace {
   display: flex;
   flex-direction: column;
@@ -69,6 +69,66 @@ body,
 .tabbar-spacer {
   height: var(--row);
   flex: none;
+}
+.topbar {
+  display: flex;
+  flex: none;
+  min-width: 0;
+}
+.topbar .tabbar {
+  flex: 1;
+  min-width: 0;
+}
+.projectbar {
+  display: flex;
+  flex: none;
+  max-width: 50%;
+  height: var(--row);
+  line-height: var(--row);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: pre;
+  border-right: 1px solid var(--raised);
+  margin-right: 1ch;
+}
+.projectbar::-webkit-scrollbar {
+  display: none;
+}
+.project {
+  padding: 0 1ch;
+  color: var(--dim);
+  cursor: default;
+}
+.project .num {
+  color: var(--dim);
+  font-weight: normal;
+}
+.project .dot {
+  color: var(--dim);
+  font-weight: normal;
+}
+.project.active {
+  color: var(--fg);
+  background: var(--raised);
+  font-weight: bold;
+}
+.project.connecting,
+.project.idle {
+  font-style: italic;
+}
+.project.lost {
+  color: var(--red);
+}
+.project:not(.active):hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+}
+/* The connect screen, in place of the panes of a project that isn't connected yet. */
+.connect-layer {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  font-family: var(--sans);
 }
 
 .panes {

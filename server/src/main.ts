@@ -30,10 +30,10 @@ const methods: Record<string, (args: any[]) => unknown> = {
   Platform: () => app.Platform(),
   OcProjects: () => app.OcProjects(),
   OcPods: ([project]) => app.OcPods(String(project ?? '')),
-  Connect: ([target]) => app.Connect(target),
+  Connect: ([target, id]) => app.Connect(target, String(id ?? '')),
   PickFolder: () => app.PickFolder(),
-  Disconnect: () => app.Disconnect(),
-  Call: ([method, params]) => app.Call(String(method ?? ''), String(params ?? '')),
+  Disconnect: ([id]) => app.Disconnect(String(id ?? '')),
+  Call: ([method, params, id]) => app.Call(String(method ?? ''), String(params ?? ''), String(id ?? '')),
   SetDirty: () => app.SetDirty(),
   Quit: () => app.Quit(),
 }
@@ -96,7 +96,7 @@ server.listen(port, host, () => console.log(`monomyth server on http://${flags.a
 
 // Hang up the shells before exiting.
 const stop = async () => {
-  await app.Disconnect().catch(() => {})
+  await app.DisconnectAll().catch(() => {})
   process.exit(0)
 }
 process.on('SIGINT', stop)

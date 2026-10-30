@@ -1,8 +1,10 @@
-// Typed calls to the agent in the container (see agent/*.go for what each does).
+// Typed calls to the agent in the container (see agent/*.go for what each does). Each project
+// has its own agent, reached by the project's id.
 import { invoke, on } from './bridge'
+import * as S from './store'
 
-async function call<T>(method: string, params: unknown = {}): Promise<T> {
-  const out = await invoke<string>('Call', method, JSON.stringify(params))
+async function call<T>(conn: string, method: string, params: unknown = {}): Promise<T> {
+  const out = await invoke<string>('Call', method, JSON.stringify(params), conn)
   return JSON.parse(out) as T
 }
 
@@ -24,37 +26,45 @@ export type Repo = {
 export type Version = { content: string; binary: boolean }
 export type Match = { path: string; line: number; col: number; text: string }
 
-export const agent = {
-  hello: (root?: string) => call<Hello>('hello', { root }),
-  list: (path: string) => call<Entry[]>('fs.list', { path }),
-  read: (path: string, limit?: number) => call<ReadResult>('fs.read', { path, limit }),
-  write: (path: string, content: string) => call<void>('fs.write', { path, content }),
-  create: (path: string, dir: boolean) => call<void>('fs.create', { path, dir }),
-  rename: (from: string, to: string) => call<void>('fs.rename', { from, to }),
-  remove: (path: string) => call<void>('fs.delete', { path }),
-  stat: (path: string) => call<{ exists: boolean; dir: boolean }>('fs.stat', { path }),
-  files: (root: string) => call<{ files: string[]; truncated: boolean }>('fs.files', { root }),
-  grep: (root: string, query: string) => call<{ matches: Match[]; truncated: boolean }>('fs.grep', { root, query }),
-  repos: (roots: string[]) => call<Repo[]>('scm.repos', { roots }),
-  changes: (repo: string) => call<Change[]>('scm.changes', { repo }),
-  versions: (repo: string, change: Change) => call<{ old: Version; new: Version }>('scm.versions', { repo, change }),
-  fetch: (repo: string, name: string) => call<Repo>('scm.fetch', { repo, name }),
-  sync: (repo: string) => call<void>('scm.sync', { repo }),
-  termOpen: (cols: number, rows: number, cwd: string) => call<{ id: string; shell: string }>('term.open', { cols, rows, cwd }),
-  termInput: (id: string, data: string) => call<void>('term.input', { id, data }),
-  termResize: (id: string, cols: number, rows: number) => call<void>('term.resize', { id, cols, rows }),
-  termClose: (id: string) => call<void>('term.close', { id }),
+// The agent of a project: a fixed one, or (given a function) whichever it names at each call.
+export function agentFor(project: string | (() => string)) {
+  const conn = typeof project === 'function' ? project : () => project
+  return {
+    hello: (root?: string) => call<Hello>(conn(), 'hello', { root }),
+    list: (path: string) => call<Entry[]>(conn(), 'fs.list', { path }),
+    read: (path: string, limit?: number) => call<ReadResult>(conn(), 'fs.read', { path, limit }),
+    write: (path: string, content: string) => call<void>(conn(), 'fs.write', { path, content }),
+    create: (path: string, dir: boolean) => call<void>(conn(), 'fs.create', { path, dir }),
+    rename: (from: string, to: string) => call<void>(conn(), 'fs.rename', { from, to }),
+    remove: (path: string) => call<void>(conn(), 'fs.delete', { path }),
+    stat: (path: string) => call<{ exists: boolean; dir: boolean }>(conn(), 'fs.stat', { path }),
+    files: (root: string) => call<{ files: string[]; truncated: boolean }>(conn(), 'fs.files', { root }),
+    grep: (root: string, query: string) => call<{ matches: Match[]; truncated: boolean }>(conn(), 'fs.grep', { root, query }),
+    repos: (roots: string[]) => call<Repo[]>(conn(), 'scm.repos', { roots }),
+    changes: (repo: string) => call<Change[]>(conn(), 'scm.changes', { repo }),
+    versions: (repo: string, change: Change) => call<{ old: Version; new: Version }>(conn(), 'scm.versions', { repo, change }),
+    fetch: (repo: string, name: string) => call<Repo>(conn(), 'scm.fetch', { repo, name }),
+    sync: (repo: string) => call<void>(conn(), 'scm.sync', { repo }),
+    termOpen: (cols: number, rows: number, cwd: string) => call<{ id: string; shell: string }>(conn(), 'term.open', { cols, rows, cwd }),
+    termInput: (id: string, data: string) => call<void>(conn(), 'term.input', { id, data }),
+    termResize: (id: string, cols: number, rows: number) => call<void>(conn(), 'term.resize', { id, cols, rows }),
+    termClose: (id: string) => call<void>(conn(), 'term.close', { id }),
+  }
 }
 
-type AgentEvent = { event: string; params: any }
-const handlers = new Map<string, Set<(params: any) => void>>()
+// The current project's agent.
+export const agent = agentFor(() => S.get().project)
+
+type AgentEvent = { conn: string; event: string; params: any }
+type Handler = (params: any, project: string) => void
+const handlers = new Map<string, Set<Handler>>()
 let listening = false
 
-// Events from the agent (terminal output and exits), by name.
-export function onAgent(event: string, fn: (params: any) => void): () => void {
+// Events from the agents (terminal output and exits), by name, with the project they're from.
+export function onAgent(event: string, fn: Handler): () => void {
   if (!listening) {
     listening = true
-    on('agent:event', (e: AgentEvent) => handlers.get(e.event)?.forEach((h) => h(e.params)))
+    on('agent:event', (e: AgentEvent) => handlers.get(e.event)?.forEach((h) => h(e.params, e.conn)))
   }
   let set = handlers.get(event)
   if (!set) handlers.set(event, (set = new Set()))
