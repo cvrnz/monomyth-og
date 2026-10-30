@@ -1,7 +1,9 @@
 // The file explorer (Cmd+E, and again to go back): every project's first tab, with the
 // folder's tree on the left and a preview of the selected file on the right. It shows the file
 // that was open when it was switched to. Files open in a tab of their own. Hidden files show; .git
-// and .DS_Store never do (as in the nvim config's neo-tree).
+// and .DS_Store never do (as in the nvim config's neo-tree). Files with uncommitted changes show
+// in their Git status's color with its letter (M modified, U untracked, A added, R renamed), and
+// folders holding any with a dot.
 //
 //   j/k ↑/↓  move          Enter/o  open file, expand or collapse folder
 //   l/→      expand        h/←      collapse, or go to the parent folder
@@ -18,9 +20,9 @@ import { useParts } from '../lib/parts'
 import { dirname, isInside, join, pretty } from '../lib/paths'
 import * as S from '../lib/store'
 import Hints from './Hints'
+import SideSplitter, { sideStyle, useSideWidth } from './SideSplitter'
 
 const neverShow = new Set(['.git', '.DS_Store'])
-import SideSplitter, { sideStyle, useSideWidth } from './SideSplitter'
 
 type Node = { path: string; name: string; dir: boolean; link: boolean; depth: number }
 
@@ -46,9 +48,9 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
   const previewHost = useRef<HTMLDivElement>(null)
   const previewRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const [previewNote, setPreviewNote] = useState('')
+  const treeWidth = useSideWidth('explorer')
 
   const load = useCallback(async (dir: string): Promise<Entry[]> => {
-  const treeWidth = useSideWidth('explorer')
     try {
       const list = (await agent.list(dir)).filter((e) => !neverShow.has(e.name))
       setChildren((m) => new Map(m).set(dir, list))
@@ -58,6 +60,34 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
       return []
     }
   }, [agent])
+
+  // Uncommitted changes in the repos at or under the folder: each changed file's status, and
+  // the folders they're in. Reloaded when the tab is shown, every few seconds while it is, and
+  // after a change made here.
+  const [changed, setChanged] = useState<Map<string, string>>(new Map())
+  const loadChanges = useCallback(async () => {
+    const repos = await agent.repos([root]).catch(() => [])
+    const lists = await Promise.all(
+      repos.map((r) => agent.changes(r.path).then((l) => l.map((c) => [join(r.path, c.path), c.status] as const), () => [])),
+    )
+    setChanged(new Map(lists.flat()))
+  }, [agent, root])
+  const changedDirs = useMemo(() => {
+    const dirs = new Set<string>()
+    for (const p of changed.keys()) {
+      for (let d = dirname(p); isInside(d, root) && !dirs.has(d); d = dirname(d)) {
+        dirs.add(d)
+        if (d === root) break
+      }
+    }
+    return dirs
+  }, [changed, root])
+  useEffect(() => {
+    if (!active) return
+    loadChanges()
+    const timer = setInterval(() => document.visibilityState === 'visible' && loadChanges(), 5000)
+    return () => clearInterval(timer)
+  }, [active, loadChanges])
 
   // Show the file it was asked to: its folders expanded, it selected.
   useEffect(() => {
@@ -223,6 +253,7 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
       return
     }
     await reloadAround(path)
+    loadChanges()
     if (isDir) setSelected(path)
     else openFile(path)
   }
@@ -259,6 +290,7 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
     }
     await load(dirname(node.path))
     await reloadAround(to)
+    loadChanges()
   }
 
   const remove = async () => {
@@ -276,11 +308,13 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
     }
     const next = nodes[index + 1] && !isInside(nodes[index + 1].path, node.path) ? nodes[index + 1] : nodes[index - 1]
     await load(dirname(node.path))
+    loadChanges()
     if (next) setSelected(next.path)
   }
 
   const refresh = async () => {
     await Promise.all([...expanded].map(load))
+    loadChanges()
   }
 
   const onKeyDown = async (e: React.KeyboardEvent) => {
@@ -335,12 +369,16 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
                 onDoubleClick={() => !n.dir && activate(n)}
               >
                 <span className="icon">{n.dir ? (expanded.has(n.path) ? '▾ ' : '▸ ') : '  '}</span>
-                <span className={n.dir ? 'dir' : n.link ? 'link' : ''}>{n.name}</span>
+                <span className={n.dir ? 'dir' : changed.has(n.path) ? `st-${changed.get(n.path)}` : n.link ? 'link' : ''}>{n.name}</span>
                 {n.link && <span className="dim"> →</span>}
+                {n.dir
+                  ? (changedDirs.has(n.path) || changed.has(n.path)) && <span className="st-M" title="Has uncommitted changes"> •</span>
+                  : changed.has(n.path) && <span className={`st-${changed.get(n.path)}`}>  {changed.get(n.path)}</span>}
               </div>
             ))}
             {error && <div className="empty bad">{error}</div>}
           </div>
+          <SideSplitter side="explorer" target={tree} />
           <div className="explorer-preview" onFocus={() => setPart('preview')}>
             <div ref={previewHost} style={{ position: 'absolute', inset: 0, visibility: previewNote ? 'hidden' : undefined }} />
             {previewNote && <div className="note">{previewNote}</div>}
@@ -356,6 +394,3 @@ function Tree({ tab, active, root, home }: Props & { root: string; home: string 
     </div>
   )
 }
-                {n.dir
-                  ? (changedDirs.has(n.path) || changed.has(n.path)) && <span className="st-M" title="Has uncommitted changes"> •</span>
-                  : changed.has(n.path) && <span className={`st-${changed.get(n.path)}`}>  {changed.get(n.path)}</span>}
