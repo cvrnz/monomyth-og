@@ -42,7 +42,9 @@ export class App {
   settingsPath = settingsPath()
 
   private emit: Emit
-  private client: Connection | undefined
+  private clients = new Map<string, Connection>()
+  // Connections being started, so a Disconnect meanwhile can call them off.
+  private starting = new Map<string, symbol>()
 
   constructor(emit: Emit) {
     this.emit = emit
@@ -91,41 +93,61 @@ export class App {
     return this.oc().pods(project)
   }
 
-  // Starts the agent, replacing any earlier connection. Progress comes as agent:status events,
-  // the agent's events as agent:event, and a dropped connection as agent:closed.
-  async Connect(t: Target) {
-    await this.Disconnect()
-    const onEvent = (event: string, params: unknown) => this.emit('agent:event', { event, params })
-    const status = (s: string) => this.emit('agent:status', s)
+  // Starts the agent for a connection id (one per project in the window), replacing any
+  // earlier connection with that id. Progress comes as agent:status events, the agent's events
+  // as agent:event, and a dropped connection as agent:closed, each with the connection id.
+  async Connect(t: Target, id = '') {
+    await this.Disconnect(id)
+    const token = Symbol(id)
+    this.starting.set(id, token)
+    const onEvent = (event: string, params: unknown) => this.emit('agent:event', { conn: id, event, params })
+    const status = (s: string) => this.emit('agent:status', { conn: id, status: s })
     let mine: Connection | undefined
     const onClose = (reason: string) => {
-      if (mine && this.client === mine) {
-        this.client = undefined
-        this.emit('agent:closed', reason)
+      if (mine && this.clients.get(id) === mine) {
+        this.clients.delete(id)
+        this.emit('agent:closed', { conn: id, error: reason })
       }
     }
-    if (t?.local) {
-      status('Opening…')
-      mine = new LocalAgent(onEvent)
-    } else if (this.localAgent) {
-      status('Starting…')
-      mine = new AgentProcess(this.localAgent, [], onEvent, onClose)
-    } else {
-      mine = await this.oc().connect(t, status, onEvent, onClose)
+    try {
+      if (t?.local) {
+        status('Opening…')
+        mine = new LocalAgent(onEvent)
+      } else if (this.localAgent) {
+        status('Starting…')
+        mine = new AgentProcess(this.localAgent, [], onEvent, onClose)
+      } else {
+        mine = await this.oc().connect(t, status, onEvent, onClose)
+      }
+    } finally {
+      if (this.starting.get(id) === token) this.starting.delete(id)
+      else if (mine) {
+        // Disconnected (or connected again) while starting: this one isn't wanted.
+        const unwanted = mine
+        mine = undefined
+        await unwanted.close()
+      }
     }
-    this.client = mine
+    if (!mine) throw new Error('disconnected')
+    this.clients.set(id, mine)
   }
 
-  async Disconnect() {
-    const c = this.client
-    this.client = undefined
+  async Disconnect(id = '') {
+    this.starting.delete(id)
+    const c = this.clients.get(id)
+    this.clients.delete(id)
     await c?.close()
   }
 
-  // Sends a request to the agent; params and the result are JSON.
-  async Call(method: string, params: string): Promise<string> {
-    if (!this.client) throw new Error('not connected')
-    return this.client.call(method, params || 'null')
+  async DisconnectAll() {
+    await Promise.all([...this.clients.keys()].map((id) => this.Disconnect(id)))
+  }
+
+  // Sends a request to a connection's agent; params and the result are JSON.
+  async Call(method: string, params: string, id = ''): Promise<string> {
+    const c = this.clients.get(id)
+    if (!c) throw new Error('not connected')
+    return c.call(method, params || 'null')
   }
 
   // Asks for a folder on this computer with the system's picker. An empty result means it was

@@ -2,7 +2,7 @@
 // be a command line: a command with arguments (`FontSize 16`, `e src/app.ts`), or, in a file
 // with Vim keybindings on, any Ex command (`%s/a/b/g`, `10`, `sort`).
 import * as A from './actions'
-import { disconnect, reconnect } from './connection'
+import { disconnect, newProject, reconnect } from './connection'
 import { prompt, toast } from './dialogs'
 import { pane } from './panes'
 import { updateSettings } from './settings'
@@ -135,7 +135,8 @@ export const commands: Command[] = [
       await reconnect()
     },
   },
-  { name: 'Disconnect', desc: 'Disconnect and pick another container', run: () => disconnect() },
+  { name: 'NewProject', desc: 'Open another container or folder alongside this one', aliases: ['project'], run: () => newProject() },
+  { name: 'Disconnect', desc: 'Close this project and its connection', aliases: ['CloseProject'], run: () => disconnect() },
   {
     name: 'OcPath',
     desc: 'Set where the oc command is (empty to find it)',

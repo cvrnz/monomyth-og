@@ -4,8 +4,8 @@
 // side-by-side diff on the right. Tab switches between the lists; Enter picks a repo, runs
 // the sync button, or opens a file.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { agent, type Change, type Repo } from '../lib/agent'
-import { openFile, root as rootPath } from '../lib/actions'
+import { agentFor, type Change, type Repo } from '../lib/agent'
+import { openFile } from '../lib/actions'
 import { errorText } from '../lib/bridge'
 import { toast } from '../lib/dialogs'
 import { languageFor, monaco } from '../lib/monaco'
@@ -17,6 +17,7 @@ type Busy = { repo: string; verb: string; frame: number } | { repo: string; text
 type Row = { text: React.ReactNode; width: number; item?: { repo?: Repo; change?: Change; sync?: boolean } }
 
 const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+// By project and repo path.
 const lastFetch = new Map<string, number>()
 
 export default function ScmPane({ id, active }: { id: string; active: boolean }) {
@@ -31,7 +32,14 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
   const diffRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null)
   const repoRef = useRef<Repo | null>(null)
   repoRef.current = repo
-  const hello = S.useStore((s) => (s.conn.state === 'connected' || s.conn.state === 'lost' ? s.conn.hello : null))
+  // This pane's project, which needn't be the current one.
+  const project = S.useProjectId()
+  const agent = useMemo(() => agentFor(project), [project])
+  const hello = S.useProject((p) => (S.isConnected(p.conn) ? p.conn.hello : null))
+  const rootPath = () => {
+    const c = S.project(project)?.conn
+    return c && S.isConnected(c) ? c.hello.root : '/'
+  }
   const settings = S.useStore((s) => s.settings)
 
   const refresh = useCallback(async (pick?: (list: Repo[]) => Repo | undefined) => {
@@ -53,8 +61,8 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     }
     // Fetch in the background so the pull counts are current, at most once a minute a repo.
     for (const r of list) {
-      if (!r.sync || Date.now() - (lastFetch.get(r.path) ?? 0) < 60000) continue
-      lastFetch.set(r.path, Date.now())
+      if (!r.sync || Date.now() - (lastFetch.get(project + r.path) ?? 0) < 60000) continue
+      lastFetch.set(project + r.path, Date.now())
       agent.fetch(r.path, r.name).then(
         (fresh) => {
           setRepos((rs) => rs?.map((x) => (x.path === fresh.path ? fresh : x)) ?? rs)
@@ -282,7 +290,7 @@ export default function ScmPane({ id, active }: { id: string; active: boolean })
     let err: string | null = null
     try {
       await agent.sync(target.path)
-      lastFetch.set(target.path, Date.now())
+      lastFetch.set(project + target.path, Date.now())
     } catch (e) {
       err = errorText(e)
     }

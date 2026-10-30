@@ -36,6 +36,12 @@ Everything in the original plan is built:
   (`App.PickFolder`). On macOS, Homebrew's bin folders are added to PATH for git and rg. On
   Windows, git/rg run with no console window, and paths are `C:/...` on the wire.
 
+- **Projects**: several connections in one window (`store.ts`: `projects`, the current one's
+  fields mirrored at the top of the state; `ProjectContext` gives panes their project, and
+  `agentFor(id)` its agent). The Node server keys connections by project id (`Connect`,
+  `Call`, `Disconnect` take it last; events carry `conn`). The Go side (`internal/app`) hasn't
+  been updated, so the desktop app's calls and events no longer match it.
+
 ## Verified (in a Linux container)
 
 - `go vet` (linux + windows), `tsc`, `pnpm build`, `oxlint` (warnings only, React-compiler

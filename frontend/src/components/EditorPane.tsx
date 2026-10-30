@@ -3,7 +3,7 @@
 // max width (120 columns by default), line numbers included, like the nvim config.
 import { initVimMode, type VimAdapterInstance } from 'monaco-vim'
 import { useEffect, useRef, useState } from 'react'
-import { agent } from '../lib/agent'
+import { agentFor } from '../lib/agent'
 import { askPath, okToWrite } from '../lib/actions'
 import { errorText } from '../lib/bridge'
 import { toast } from '../lib/dialogs'
@@ -33,11 +33,13 @@ export default function EditorPane({ tab, active, centered }: Props) {
   const [loaded, setLoaded] = useState(false)
 
   const settings = S.useStore((s) => s.settings)
+  const project = S.useProjectId()
   const { vim, lineNumbers, fontSize, fontFamily, maxColumns } = settings
 
   // The editor and its file.
   useEffect(() => {
     let disposed = false
+    const agent = agentFor(project)
     const editor = monaco.editor.create(host.current!, {
       model: null,
       automaticLayout: true,
@@ -104,7 +106,7 @@ export default function EditorPane({ tab, active, centered }: Props) {
       savedVersion.current = model.getAlternativeVersionId()
       model.onDidChangeContent(() => {
         const dirty = model.getAlternativeVersionId() !== savedVersion.current
-        const t = S.get().tabs.find((x) => x.id === tab.id)
+        const t = S.project(project)?.tabs.find((x) => x.id === tab.id)
         if (t?.kind === 'file' && t.dirty !== dirty) S.updateTab(tab.id, { dirty })
         status()
       })

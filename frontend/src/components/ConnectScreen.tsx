@@ -3,7 +3,7 @@
 import { Button, Spinner } from '@heroui/react'
 import { useCallback, useEffect, useState } from 'react'
 import { errorText, invoke } from '../lib/bridge'
-import { connect, forget } from '../lib/connection'
+import { closeProject, connect, forget } from '../lib/connection'
 import { basename } from '../lib/paths'
 import { updateSettings } from '../lib/settings'
 import * as S from '../lib/store'
@@ -27,6 +27,8 @@ export default function ConnectScreen() {
   const conn = S.useStore((s) => s.conn)
   const recents = S.useStore((s) => s.settings.recents)
   const ocPath = S.useStore((s) => s.settings.ocPath ?? '')
+  // Opening another project beside ones already open: it can be called off.
+  const others = S.useStore((s) => s.projects.length > 1)
 
   const [projects, setProjects] = useState<string[] | null>(null)
   const [project, setProject] = useState('')
@@ -155,6 +157,13 @@ export default function ConnectScreen() {
       <div className="connect-inner">
         <h1>Monomyth</h1>
         <div className="sub">Edit files on this computer, or in an OpenShift or Dev Spaces container.</div>
+        {others && (
+          <div className="row-fields">
+            <Button size="sm" variant="tertiary" onPress={() => closeProject(S.get().project)}>
+              Cancel
+            </Button>
+          </div>
+        )}
 
         {busy && (
           <div className="status">

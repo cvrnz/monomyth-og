@@ -128,6 +128,7 @@ export default function Welcome({ id, active }: { id: string; active: boolean })
       ['Split terminal', keyLabel('\\')],
       ['New tab', keyLabel('N')],
       ['Switch tabs', `${keyLabel('H')}  ${keyLabel('L')}`],
+      ['Switch projects', `${keyLabel('1')}  ${keyLabel('2')}  …`],
       ['Source control', keyLabel('G')],
       ['Close', keyLabel('W')],
       ['Command palette', ':'],
