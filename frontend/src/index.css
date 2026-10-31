@@ -31,6 +31,16 @@ body,
   background: var(--selection);
 }
 
+/* Above the connect screen when it's the whole window: what drags the macOS app's window, which
+   has no title bar (Workspace's top row does it otherwise). */
+.window-drag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+
 /* Workspace: project tabs and tab bar, a blank row, the panes, the status bar. */
 .workspace {
   display: flex;

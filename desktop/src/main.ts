@@ -4,7 +4,7 @@
 // Closing the window or quitting goes through the page: the app sends it app:quit-requested,
 // the page asks about unsaved changes and saves its session, and then tells the server to
 // quit, which passes that on here (see server/src/main.ts).
-import Electrobun, { ApplicationMenu, BrowserWindow, PATHS, Utils } from "electrobun/main";
+import Electrobun, { ApplicationMenu, BrowserWindow, ContextMenu, PATHS, Utils } from "electrobun/main";
 import path from "node:path";
 
 const app = path.join(PATHS.RESOURCES_FOLDER, "app");
@@ -29,7 +29,7 @@ async function loginPath(): Promise<string | undefined> {
 	}
 }
 
-type FromServer = { ready?: number; dirty?: boolean; quit?: boolean };
+type FromServer = { ready?: number; dirty?: boolean; quit?: boolean; window?: string };
 
 let win: BrowserWindow | undefined;
 let dirty = false;
@@ -53,6 +53,7 @@ const server = Bun.spawn(
 			if (msg.ready) open(msg.ready);
 			if (msg.dirty !== undefined) dirty = msg.dirty;
 			if (msg.quit) quitNow();
+			if (msg.window) windowAction(msg.window);
 		},
 	},
 );
@@ -74,6 +75,10 @@ function open(port: number) {
 		title: "Monomyth",
 		url: `http://127.0.0.1:${port}/`,
 		frame: { width: 1400, height: 900 },
+		// No title bar or window buttons: the page's top row drags the window (marked with the
+		// electrobun-webkit-app-region-* classes), double-clicking it zooms, and right-clicking
+		// it shows the window menu (frontend/src/lib/window.ts).
+		titleBarStyle: "hidden",
 	});
 	win.center();
 	win.on("will-close", (e: any) => {
@@ -81,6 +86,29 @@ function open(port: number) {
 		e.response = { allow: false };
 	});
 }
+
+// What the page's top row asks for, and the window menu's items. Closing the only window
+// quits, so close asks the page first, as will-close does (requestClose would act as the
+// system's close button, which this window doesn't have, and do nothing).
+function windowAction(action: string) {
+	if (!win) return;
+	if (action === "menu") {
+		ContextMenu.showContextMenu([
+			{ label: "Close", action: "close" },
+			{ label: "Minimize", action: "minimize" },
+			{ label: win.isFullScreen() ? "Exit Full Screen" : "Enter Full Screen", action: "fullscreen" },
+		]);
+	} else if (action === "close") {
+		if (!askFirst()) win.close();
+	} else if (action === "minimize") win.minimize();
+	else if (action === "fullscreen") win.setFullScreen(!win.isFullScreen());
+	else if (action === "zoom") {
+		if (win.isMaximized()) win.unmaximize();
+		else win.maximize();
+	}
+}
+
+ContextMenu.on("context-menu-clicked", (e: any) => windowAction(e.data?.action ?? ""));
 
 // Whether to ask the page before closing or quitting (no, once it has agreed). The page answers
 // by saving its session and quitting, after asking about unsaved changes (and not at all if the

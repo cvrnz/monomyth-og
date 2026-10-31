@@ -9,7 +9,8 @@
 // container path without a cluster. Port 0 picks a free one.
 //
 // Started by the macOS app, it talks to it over IPC: it sends { ready: port } once listening,
-// { dirty } when unsaved changes come and go, and { quit: true } when the page agrees to quit;
+// { dirty } when unsaved changes come and go, { quit: true } when the page agrees to quit, and
+// { window: 'menu' | 'zoom' } for the page's top row (right-clicked or double-clicked);
 // the app sends { event } for events to pass to the page (app:quit-requested).
 import { createReadStream, statSync } from 'node:fs'
 import http from 'node:http'
@@ -64,6 +65,9 @@ const methods: Record<string, (args: any[]) => unknown> = {
   // The macOS app asks before closing while anything is unsaved. Quit returns whether there's
   // an app to quit (in a browser there isn't).
   SetDirty: ([dirty]) => desktop?.({ dirty: Boolean(dirty) }),
+  // Whether the page is in the macOS app, whose window has no title bar, and its top row.
+  Desktop: () => Boolean(desktop),
+  Window: ([action]) => desktop?.({ window: String(action ?? '') }),
   Quit: () => {
     desktop?.({ quit: true })
     return Boolean(desktop)
