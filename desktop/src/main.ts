@@ -112,35 +112,41 @@ Electrobun.events.on("before-quit", (e: any) => {
 
 // Monomyth's own shortcuts take Cmd+H (previous tab) and Cmd+W (close tab), so the menu
 // leaves out Hide and Close. The Edit menu is what makes Cmd+C/V/X/A/Z work in a WebKit view.
+// Electrobun gives roles no shortcuts of their own, so each is spelled out.
 ApplicationMenu.setApplicationMenu([
 	{
 		submenu: [
 			{ role: "about" },
 			{ type: "divider" },
-			{ role: "hideOthers" },
+			{ role: "hideOthers", accelerator: "command+option+h" },
 			{ role: "showAll" },
 			{ type: "divider" },
-			{ role: "quit" },
+			{ role: "quit", accelerator: "command+q" },
 		],
 	},
 	{
 		label: "Edit",
 		submenu: [
-			{ role: "undo" },
-			{ role: "redo" },
+			{ role: "undo", accelerator: "command+z" },
+			{ role: "redo", accelerator: "command+shift+z" },
 			{ type: "divider" },
-			{ role: "cut" },
-			{ role: "copy" },
-			{ role: "paste" },
-			{ role: "selectAll" },
+			{ role: "cut", accelerator: "command+x" },
+			{ role: "copy", accelerator: "command+c" },
+			{ role: "paste", accelerator: "command+v" },
+			{ role: "selectAll", accelerator: "command+a" },
 		],
 	},
 	{
 		label: "View",
-		submenu: [{ role: "toggleFullScreen" }],
+		submenu: [{ role: "toggleFullScreen", accelerator: "command+control+f" }],
 	},
 	{
 		label: "Window",
-		submenu: [{ role: "minimize" }, { role: "zoom" }, { type: "divider" }, { role: "bringAllToFront" }],
+		submenu: [
+			{ role: "minimize", accelerator: "command+m" },
+			{ role: "zoom" },
+			{ type: "divider" },
+			{ role: "bringAllToFront" },
+		],
 	},
 ]);
