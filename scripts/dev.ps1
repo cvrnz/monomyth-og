@@ -1,4 +1,4 @@
-﻿# Runs Monomyth with no exe of its own (Windows PowerShell): the Node server (server/) on
+﻿# Runs Monomyth from source (Windows PowerShell): the server (server/, on Bun) on
 # :34115, Vite on :9245, and an app window (Edge or Chrome with --app, on its own profile).
 # Closing the window or Ctrl+C stops everything.
 #
@@ -11,13 +11,13 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 $url = 'http://127.0.0.1:9245'
 
-foreach ($tool in 'node', 'pnpm') {
+foreach ($tool in @('bun')) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool not found on PATH" }
 }
 
 foreach ($dir in 'frontend', 'server') {
     if (-not (Test-Path "$dir\node_modules")) {
-        pnpm --dir $dir install
+        Push-Location $dir; bun install; Pop-Location
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
 }
@@ -34,12 +34,12 @@ if (-not (Test-Path 'agent\bin\agent-linux-amd64')) {
 
 $procs = @()
 try {
-    $procs += Start-Process node -ArgumentList 'server/src/main.ts' -NoNewWindow -PassThru
+    $procs += Start-Process bun -ArgumentList 'server/src/main.ts' -NoNewWindow -PassThru
     if ($Browser) {
-        pnpm --dir frontend dev
+        Push-Location frontend; bun run dev; Pop-Location
         return
     }
-    $procs += Start-Process cmd -ArgumentList '/c', 'pnpm --dir frontend dev >nul 2>&1' -WindowStyle Hidden -PassThru
+    $procs += Start-Process cmd -ArgumentList '/c', 'cd frontend && bun run dev >nul 2>&1' -WindowStyle Hidden -PassThru
     while ($true) {
         try { Invoke-WebRequest -UseBasicParsing $url -TimeoutSec 2 | Out-Null; break } catch {}
         if ($procs[1].HasExited) { throw 'vite stopped' }

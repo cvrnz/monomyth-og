@@ -1,4 +1,4 @@
-// The way to the backend: the Node server (server/) over HTTP, with events over server-sent
+// The way to the backend: the server (server/) over HTTP, with events over server-sent
 // events.
 
 type Listener = (data: any) => void

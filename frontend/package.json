@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:dev": "tsc -b && vite build --minify false --mode development",
+    "dev": "bun --bun vite",
+    "build": "tsc -b && bun --bun vite build",
+    "build:dev": "tsc -b && bun --bun vite build --minify false --mode development",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "bun --bun vite preview"
   },
   "dependencies": {
     "@heroui/react": "^3.2.6",
@@ -23,13 +23,13 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.89.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "@types/bun": "^1.4.4"
   }
 }
