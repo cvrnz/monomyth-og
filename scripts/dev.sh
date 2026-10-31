@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Runs Monomyth from source (WSL, Git Bash on Windows, macOS, Linux): the server (server/, on
-# Bun) on :34115, Vite on :9245, and an app window (Edge or Chrome with --app, on its own
-# profile; the Windows browser under WSL). Closing the window or Ctrl+C stops everything.
+# Runs Monomyth from source in WSL: the server (server/, on Bun) on :34115, Vite on :9245, and
+# an app window (Windows' Edge or Chrome with --app, on its own profile). Closing the window or
+# Ctrl+C stops everything.
 #
 #   ./scripts/dev.sh             # in a window
 #   ./scripts/dev.sh --browser   # no window; open http://127.0.0.1:9245 yourself
@@ -43,11 +43,7 @@ killtree() {
 stop() {
   # Also stops shells opened in the app's terminals.
   for pid in "${pids[@]}"; do
-    if [ -r "/proc/$pid/winpid" ]; then
-      taskkill //PID "$(cat "/proc/$pid/winpid")" //T //F >/dev/null 2>&1 || true
-    else
-      killtree "$pid"
-    fi
+    killtree "$pid"
   done
 }
 trap stop EXIT
@@ -60,37 +56,16 @@ if [ "${1:-}" = --browser ]; then
   exit
 fi
 
-wsl=
-grep -qi microsoft /proc/version 2>/dev/null && wsl=1
-
+# Windows' browser, so the app gets a regular Windows window instead of WSLg's frame; it reaches
+# the servers here through WSL's localhost forwarding.
 browser() {
   local c
-  if [ -n "${LOCALAPPDATA:-}" ] && command -v cygpath >/dev/null; then
-    local pf
-    pf="$(cygpath -u "${PROGRAMFILES:-C:\\Program Files}")"
-    for c in "$pf (x86)/Microsoft/Edge/Application/msedge.exe" \
-      "$pf/Microsoft/Edge/Application/msedge.exe" \
-      "$pf/Google/Chrome/Application/chrome.exe" \
-      "$(cygpath -u "$LOCALAPPDATA")/Google/Chrome/Application/chrome.exe"; do
-      [ -f "$c" ] && { echo "$c"; return; }
-    done
-  fi
-  # Under WSL, use the Windows browser so the app gets a regular Windows window instead of
-  # WSLg's frame; it reaches the servers here through WSL's localhost forwarding
-  if [ -n "$wsl" ]; then
-    for c in "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
-      "/mnt/c/Program Files/Microsoft/Edge/Application/msedge.exe" \
-      "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"; do
-      [ -f "$c" ] && { echo "$c"; return; }
-    done
-  fi
-  for c in "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; do
-    [ -x "$c" ] && { echo "$c"; return; }
+  for c in "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
+    "/mnt/c/Program Files/Microsoft/Edge/Application/msedge.exe" \
+    "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"; do
+    [ -f "$c" ] && { echo "$c"; return; }
   done
-  for c in microsoft-edge google-chrome chromium chromium-browser; do
-    command -v "$c" >/dev/null && { command -v "$c"; return; }
-  done
+  return 0
 }
 
 (cd frontend && exec bun run dev) >/dev/null 2>&1 &
@@ -106,13 +81,7 @@ if [ -z "$bin" ]; then
   wait
   exit
 fi
-if [ -n "${LOCALAPPDATA:-}" ] && command -v cygpath >/dev/null; then
-  profile="$(cygpath -w "$LOCALAPPDATA")\\monomyth\\window"
-elif [ -n "$wsl" ]; then
-  profile="$(cmd.exe /d /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d '\r')\\monomyth\\window"
-else
-  profile="${XDG_CONFIG_HOME:-$HOME/.config}/monomyth/window"
-fi
+profile="$(cmd.exe /d /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d '\r')\\monomyth\\window"
 echo "Monomyth is open in its window; close it (or Ctrl+C) to stop."
 # Its own profile, so the window is its own process and this waits until it's closed. No
 # extensions or sync there, so nothing else takes the app's keys (extensions an organization's

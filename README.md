@@ -144,25 +144,19 @@ isn't signed, so the first time, right-click it and choose Open.
 
 ## Running from source
 
-On Windows (WSL or Git Bash), Linux, or macOS while working on it: the server (`server/` on
-Bun, the app's service over HTTP on :34115), Vite (http://127.0.0.1:9245), and an app window
-(Edge or Chrome with `--app`, on its own profile; no tabs or address bar). Needs Bun. Closing
-the window (or Ctrl+C) stops everything; `--browser` / `-Browser` skips the window:
+On Windows, in WSL: the server (`server/` on Bun, the app's service over HTTP on :34115),
+Vite (http://127.0.0.1:9245), and an app window (Windows' Edge or Chrome with `--app`, on its
+own profile; no tabs or address bar). Needs Bun, installed in WSL. Closing the window (or
+Ctrl+C) stops everything; `--browser` skips the window (and works outside WSL too, for
+example on a Mac while working on the app):
 
 ```sh
 ./scripts/dev.sh
 ```
 
-In PowerShell:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
-```
-
-"This computer" works there, including the folder picker. Under WSL the
-picker is Windows' own, and Windows paths (`C:\Users\...`) open as their `/mnt/c/...` folders. Connecting to a
-container uploads the Go agent from `agent/bin/`, so build it once with
-`go run ./scripts/buildagent` (needs Go 1.26+; the scripts do this when Go is installed).
+"This computer" works there, including the folder picker (Windows' own); Windows paths
+(`C:\Users\...`) open as their `/mnt/c/...` folders. Connecting to a container uploads the Go agent from `agent/bin/`, so build it once with
+`go run ./scripts/buildagent` (needs Go 1.26+; the script does this when Go is installed).
 
 Checks: `GOOS=linux go vet ./...`, `cd frontend && bun run build && bun run lint`,
 `cd server && bun run typecheck && bun test`, `cd desktop && bun run typecheck`.
