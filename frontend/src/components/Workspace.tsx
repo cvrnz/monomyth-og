@@ -21,6 +21,7 @@ import SqlPane from './SqlPane'
 import SearchModal from './SearchModal'
 import TerminalPane from './TerminalPane'
 import Welcome from './Welcome'
+import { drag, noDrag, windowMenu, windowZoom } from '../lib/window'
 
 export function tabLabel(tab: S.Tab): string {
   if (S.focusedPane(tab) !== tab.id) return 'Terminal'
@@ -68,7 +69,7 @@ function ProjectBar() {
         return (
           <div
             key={p.id}
-            className={`project ${p.id === current ? 'active' : ''} ${p.conn.state}`}
+            className={`project ${noDrag} ${p.id === current ? 'active' : ''} ${p.conn.state}`}
             title={`${projectDetails(p)}${i < 9 ? `\n${keyLabel(String(i + 1))}` : ''}`}
             onMouseDown={(e) => {
               if (e.button === 1) {
@@ -88,7 +89,7 @@ function ProjectBar() {
         )
       })}
       <div
-        className="project add"
+        className={`project add ${noDrag}`}
         title="Open another container or folder"
         onMouseDown={(e) => {
           if (e.button !== 0) return
@@ -110,7 +111,7 @@ function TabBar() {
       {tabs.map((t) => (
         <div
           key={t.id}
-          className={`tab ${t.id === active ? 'active' : ''}`}
+          className={`tab ${noDrag} ${t.id === active ? 'active' : ''}`}
           title={t.kind === 'file' && t.path ? t.path : undefined}
           onMouseDown={(e) => {
             if (e.button === 1) {
@@ -262,7 +263,8 @@ export default function Workspace() {
   const connected = S.useStore((s) => S.isConnected(s.conn))
   return (
     <div className="workspace">
-      <div className="topbar">
+      {/* In the macOS app its background drags the window, and has the window menu and zoom. */}
+      <div className={`topbar ${drag}`} onContextMenu={windowMenu} onDoubleClick={windowZoom}>
         <ProjectBar />
         <TabBar />
       </div>
