@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2024",
     "lib": ["ES2024"],
-    "types": ["node"],
+    "types": ["bun"],
     "module": "nodenext",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

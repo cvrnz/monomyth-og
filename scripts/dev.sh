@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs Monomyth with no exe of its own (Git Bash on Windows, WSL, macOS, Linux): the Node server
-# (server/) on :34115, Vite on :9245, and an app window (Edge or Chrome with --app, on its own
+# Runs Monomyth from source (WSL, Git Bash on Windows, macOS, Linux): the server (server/, on
+# Bun) on :34115, Vite on :9245, and an app window (Edge or Chrome with --app, on its own
 # profile; the Windows browser under WSL). Closing the window or Ctrl+C stops everything.
 #
 #   ./scripts/dev.sh             # in a window
@@ -9,12 +9,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 url=http://127.0.0.1:9245
 
-for tool in node pnpm curl; do
+for tool in bun curl; do
   command -v "$tool" >/dev/null || { echo "$tool not found on PATH" >&2; exit 1; }
 done
 
-[ -d frontend/node_modules ] || pnpm --dir frontend install
-[ -d server/node_modules ] || pnpm --dir server install
+[ -d frontend/node_modules ] || (cd frontend && bun install)
+[ -d server/node_modules ] || (cd server && bun install)
 
 # Containers need the Go agent (built once, uploaded to the pod); local folders don't.
 if [ ! -f agent/bin/agent-linux-amd64 ]; then
@@ -31,7 +31,7 @@ if curl -s -o /dev/null "$url"; then
 fi
 
 pids=()
-# A process and everything under it: pnpm runs Vite as a grandchild, which would otherwise be
+# A process and everything under it: bun run starts Vite as a grandchild, which would otherwise be
 # left running (and serving) after this script stops.
 killtree() {
   local child
@@ -52,11 +52,11 @@ stop() {
 }
 trap stop EXIT
 
-node server/src/main.ts &
+bun server/src/main.ts &
 pids+=($!)
 
 if [ "${1:-}" = --browser ]; then
-  pnpm --dir frontend dev
+  (cd frontend && bun run dev)
   exit
 fi
 
@@ -93,7 +93,7 @@ browser() {
   done
 }
 
-pnpm --dir frontend dev >/dev/null 2>&1 &
+(cd frontend && exec bun run dev) >/dev/null 2>&1 &
 pids+=($!)
 until curl -s -o /dev/null "$url"; do
   kill -0 "${pids[1]}" 2>/dev/null || { echo "vite stopped" >&2; exit 1; }

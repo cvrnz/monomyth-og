@@ -1,12 +1,71 @@
-// Shells on this computer, on a pseudo-terminal (ConPTY on Windows, through node-pty): the
-// term.* methods (see internal/agent/term.go). Output streams back as term.data events, and
-// term.exit when the shell ends.
+// Shells on this computer, on a pseudo-terminal: the term.* methods (see internal/agent/term.go).
+// Output streams back as term.data events, and term.exit when the shell ends. The pseudo-terminal
+// is Bun's own on macOS and Linux, and ConPTY through node-pty on Windows, where Bun has none.
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import os from 'node:os'
-import type { IPty } from '@lydell/node-pty'
 import { expandHome, fromWire, isWindows, lookPath, toWire } from '../wire.ts'
 
 type Emit = (event: string, params: unknown) => void
+
+// A shell on a pseudo-terminal.
+type Pty = {
+  pid: number
+  write(data: Uint8Array): void
+  resize(cols: number, rows: number): void
+  kill(signal?: NodeJS.Signals): void
+}
+
+type Spawn = {
+  shell: string
+  args: string[]
+  cols: number
+  rows: number
+  cwd: string
+  env: Record<string, string | undefined>
+  onData(data: Uint8Array): void
+  onExit(code: number): void
+}
+
+function spawnBun(o: Spawn): Pty {
+  const proc = Bun.spawn([o.shell, ...o.args], {
+    cwd: o.cwd,
+    env: o.env,
+    terminal: { cols: o.cols, rows: o.rows, name: 'xterm-256color', data: (_t, data) => o.onData(data) },
+  })
+  const term = proc.terminal!
+  proc.exited.then((code) => {
+    term.close()
+    o.onExit(code)
+  })
+  return {
+    pid: proc.pid,
+    write: (data) => term.write(data),
+    resize: (cols, rows) => term.resize(cols, rows),
+    kill: (signal) => proc.kill(signal),
+  }
+}
+
+async function spawnNodePty(o: Spawn): Promise<Pty> {
+  // Loaded on first use, so a missing native module only breaks terminals.
+  const pty = await import('@lydell/node-pty')
+  const term = pty.spawn(o.shell, o.args, { name: 'xterm-256color', cols: o.cols, rows: o.rows, cwd: o.cwd, env: o.env })
+  term.onData((data) => o.onData(Buffer.from(data, 'utf8')))
+  term.onExit(({ exitCode }) => {
+    // The ConPTY output worker outlives the shell until it's killed.
+    try {
+      term.kill()
+    } catch {
+      // Already released.
+    }
+    o.onExit(exitCode)
+  })
+  return {
+    pid: term.pid,
+    write: (data) => term.write(Buffer.from(data)),
+    resize: (cols, rows) => term.resize(cols, rows),
+    kill: (signal) => term.kill(signal),
+  }
+}
 
 // Windows: PowerShell 7 if it's installed, else Windows PowerShell, else cmd. Elsewhere the
 // user's login shell, started as one (-l) so it gets their prompt and profile.
@@ -48,7 +107,7 @@ const isDir = (p: string) => {
 }
 
 export class Terminals {
-  private all = new Map<string, IPty>()
+  private all = new Map<string, Pty>()
   private next = 0
   private emit: Emit
 
@@ -56,42 +115,32 @@ export class Terminals {
     this.emit = emit
   }
 
-  private get(id: string): IPty {
+  private get(id: string): Pty {
     const t = this.all.get(id)
     if (!t) throw new Error(`no terminal ${id}`)
     return t
   }
 
   async open(p: { cols?: number; rows?: number; cwd?: string }) {
-    // Loaded on first use, so a missing native module only breaks terminals.
-    const pty = await import('@lydell/node-pty')
     const [shell, args] = shellCommand()
     const cwd = expandHome(fromWire(p.cwd || ''))
-    const term = pty.spawn(shell, args, {
-      name: 'xterm-256color',
+    const id = String(++this.next)
+    const o: Spawn = {
+      shell,
+      args,
       cols: Math.max(p.cols || 0, 20),
       rows: Math.max(p.rows || 0, 5),
       cwd: cwd && isDir(cwd) ? cwd : os.homedir(),
       env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', SHELL: shell, TERM_PROGRAM: 'monomyth' },
-    })
-    const id = String(++this.next)
-    this.all.set(id, term)
-    term.onData((data) => this.emit('term.data', { id, data: Buffer.from(data, 'utf8').toString('base64') }))
-    term.onExit(({ exitCode }) => {
-      // On Windows the ConPTY output worker outlives the shell until it's killed.
-      if (isWindows) {
-        try {
-          term.kill()
-        } catch {
-          // Already released.
-        }
-      }
+      onData: (data) => this.emit('term.data', { id, data: Buffer.from(data).toString('base64') }),
       // Let the last output through before the pane closes.
-      setTimeout(() => {
-        this.all.delete(id)
-        this.emit('term.exit', { id, code: exitCode })
-      }, 100)
-    })
+      onExit: (code) =>
+        setTimeout(() => {
+          this.all.delete(id)
+          this.emit('term.exit', { id, code })
+        }, 100),
+    }
+    this.all.set(id, isWindows ? await spawnNodePty(o) : spawnBun(o))
     return { id, shell: toWire(shell) }
   }
 
