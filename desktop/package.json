@@ -1,0 +1,15 @@
+{
+  "name": "monomyth-desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/stage.ts && electrobun build --env=stable",
+    "dev": "bun scripts/stage.ts && electrobun dev",
+    "typecheck": "electrobun prepare && tsc -p ."
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "electrobun": "2.0.5",
+    "typescript": "~5.9.3"
+  }
+}

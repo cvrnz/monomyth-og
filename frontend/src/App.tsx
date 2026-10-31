@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import ConnectScreen from './components/ConnectScreen'
 import Dialogs from './components/Dialogs'
 import Workspace from './components/Workspace'
-import { dirtyCount } from './lib/actions'
+import { dirtyCount, quit } from './lib/actions'
+import { invoke, on } from './lib/bridge'
 import { installKeys } from './lib/keys'
 import { restoreSession } from './lib/session'
 import { applyTheme, loadSettings } from './lib/settings'
@@ -27,9 +28,20 @@ export default function App() {
     })
     const unsubTheme = S.subscribe(applyTheme)
     const uninstallKeys = installKeys()
-    // Closing the window asks first while anything is unsaved.
+    // Closing the window asks first while anything is unsaved: in a browser through
+    // beforeunload, in the macOS app by quitting through the page (app:quit-requested). The app
+    // is told whether anything is unsaved, so it knows whether to wait for an answer.
+    let dirty = false
+    const unsubDirty = S.subscribe(() => {
+      const now = dirtyCount(true) > 0
+      if (now !== dirty) {
+        dirty = now
+        invoke('SetDirty', now).catch(() => {})
+      }
+    })
+    const offQuit = on('app:quit-requested', () => quit())
     const beforeUnload = (e: BeforeUnloadEvent) => {
-      if (dirtyCount(true) > 0) e.preventDefault()
+      if (dirty) e.preventDefault()
     }
     window.addEventListener('beforeunload', beforeUnload)
     return () => {
@@ -37,6 +49,8 @@ export default function App() {
       stopSession()
       unsubTheme()
       uninstallKeys()
+      unsubDirty()
+      offQuit()
       window.removeEventListener('beforeunload', beforeUnload)
     }
   }, [])
