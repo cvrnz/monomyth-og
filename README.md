@@ -163,18 +163,27 @@ Checks: `GOOS=linux go vet ./...`, `cd frontend && bun run build && bun run lint
 
 ## Layout
 
+- `frontend/` — the page: React, Monaco (with monaco-vim) and xterm.js, built by Vite.
+  `src/components` has the screens and panes (connect screen, tabs, editor, terminals, Git,
+  Explorer, SQL); `src/lib` the rest: the bridge to the server, app state, actions, commands,
+  shortcuts, Vim, themes, the saved session, and the macOS app's window handling
+  (`window.ts`). `public/` has the icons and the web app manifest.
+- `server/` — the app's service, on Bun (TypeScript run directly, no build): the page calls
+  its methods over HTTP and gets events over server-sent events (`src/main.ts`). `src/local`
+  does the work for folders on this computer, as the Go agent does in a container (files,
+  search, git, terminals on Bun's own pseudo-terminal, or node-pty's ConPTY on Windows);
+  `src/remote.ts` connects to containers with `oc` and starts the Go agent there; `src/sql`
+  runs the SQL tabs' queries (pg, mysql2, mssql, and `node:sqlite` in a child process so a
+  query can be stopped).
+- `desktop/` — the macOS app (Electrobun): `src/main.ts` starts the server on the app's Bun,
+  opens the window on it, and has the menu and the window's close and quit handling;
+  `scripts/stage.ts` gathers what goes in the app (the built page, the server, the agents);
+  `assets/` has the icon. Its builds go to `build/` and `artifacts/`.
 - `internal/agent` — the Go agent that does the work inside a container: newline-delimited
   JSON requests and events. Files (`fs.*`, including `fs.files`/`fs.grep` search, using
   ripgrep when it's installed), shells (`term.*`, on a pty via go-pty) and git (`scm.*`).
-- `agent/` — the agent binary for containers (linux), serving `internal/agent` over
-  stdin/stdout; `go run ./scripts/buildagent` builds it into `agent/bin/`.
-- `internal/proto` — the agent's wire format.
-- `server/` — the app's service, on Bun (TypeScript run directly, no build): `src/local` ports
-  `internal/agent` for this computer (terminals on Bun's own pseudo-terminal, or node-pty's
-  ConPTY on Windows) and `src/remote.ts` connects to containers with `oc` and the Go agent.
-  `src/sql` runs the SQL tabs' queries (pg, mysql2, mssql, and `node:sqlite` in a child process
-  so a query can be stopped).
-- `desktop/` — the macOS app (Electrobun): `src/main.ts` starts the server and opens the
-  window, `scripts/stage.ts` gathers what goes in the app, `assets/` has the icon.
-- `frontend/src/lib` — the bridge to the backend, app state, actions, commands, shortcuts, themes.
-  `frontend/src/components` — the screens and panes.
+  `internal/proto` — the agent's wire format.
+- `agent/` — the agent's program for containers (Linux), serving `internal/agent` over
+  stdin/stdout; `go run ./scripts/buildagent` builds it for amd64 and arm64 into `agent/bin/`,
+  where the server uploads it from.
+- `scripts/` — `dev.sh` runs Monomyth from source in WSL; `buildagent/` builds the agent.
