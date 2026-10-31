@@ -136,3 +136,12 @@ export function restoreSession(): () => void {
     clearTimeout(timer)
   }
 }
+
+// Before the macOS app quits: saves the session and waits for it, so stopping the server can't
+// cut the write short. Saved even when unchanged, to land after any save still on its way.
+export function saveSessionNow(): Promise<void> {
+  clearTimeout(timer)
+  timer = undefined
+  changed()
+  return updateSettings({ session: snapshot() })
+}

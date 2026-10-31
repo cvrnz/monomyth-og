@@ -3,9 +3,10 @@
 // new tab after it. The explorer and Git are always the first two tabs; closing the last of
 // the others leaves a welcome screen.
 import { agent } from './agent'
-import { errorText } from './bridge'
+import { errorText, invoke } from './bridge'
 import { choose, prompt, toast } from './dialogs'
 import { pane } from './panes'
+import { saveSessionNow } from './session'
 import { basename, join, normalize } from './paths'
 import * as S from './store'
 
@@ -295,9 +296,21 @@ export function switchToProject(index: number) {
   focusActive()
 }
 
-// Quitting with unsaved changes asks first. The window stays open (closing it is the browser's
-// job), so the welcome screen comes back instead.
+// Quitting with unsaved changes asks first. In the macOS app the app then quits; in a browser
+// the window stays open (closing it is the browser's job), so the welcome screen comes back.
+let quitting = false
 export async function quit() {
+  // Cmd+Q again while the question is up.
+  if (quitting) return
+  quitting = true
+  try {
+    await askAndQuit()
+  } finally {
+    quitting = false
+  }
+}
+
+async function askAndQuit() {
   const n = dirtyCount(true)
   if (n > 0) {
     const choice = await choose(
@@ -312,5 +325,6 @@ export async function quit() {
     if (choice === 'cancel') return
     if (choice === 'save' && !(await saveAll(true))) return
   }
-  if (S.get().tabs.length === 0) openWelcome()
+  await saveSessionNow()
+  if (!(await invoke<boolean>('Quit')) && S.get().tabs.length === 0) openWelcome()
 }

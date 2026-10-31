@@ -19,10 +19,14 @@ export async function loadSettings() {
   await loadUserThemes()
 }
 
-export function updateSettings(patch: Partial<S.Settings>) {
+// Resolves once saved (or failed to).
+export function updateSettings(patch: Partial<S.Settings>): Promise<void> {
   const settings = { ...S.get().settings, ...patch }
   S.set({ settings })
-  invoke('SaveSettings', JSON.stringify(settings)).catch(() => {})
+  return invoke('SaveSettings', JSON.stringify(settings)).then(
+    () => {},
+    () => {},
+  )
 }
 
 // The theme being shown: the one being previewed in the picker, or the saved one.

@@ -1,13 +1,13 @@
 # Monomyth
 
-Monomyth is an editor that runs in an app window (Edge or Chrome) on macOS, Windows and Linux, for files on your computer or inside an OpenShift /
-Dev Spaces container. For a container it uses your `oc` login: pick a project, pod and
+Monomyth is an editor for files on your computer or inside an OpenShift / Dev Spaces
+container: a macOS app, or on Windows and Linux an app window (Edge or Chrome) run from source. For a container it uses your `oc` login: pick a project, pod and
 container, and the app uploads a small agent into it (`oc exec`) that reads and writes files,
-runs shells and git. For local files a Node server on your computer does the same work. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
+runs shells and git. For local files a server on your computer (on Bun) does the same work. It behaves like the Neovim config in `dev/configs/nvim`: the same shortcuts, tab bar,
 status bar, command palette, explorer and source control tabs, centered content and
 themes. It also has SQL tabs, for querying databases.
 
-Built with Node, React, TypeScript, HeroUI, Monaco (with monaco-vim) and xterm.js.
+Built with Bun, Electrobun (the macOS app), React, TypeScript, HeroUI, Monaco (with monaco-vim) and xterm.js.
 
 ## Using it
 
@@ -42,8 +42,7 @@ Shortcuts use Cmd on macOS and Ctrl on Windows:
 Several projects (containers or local folders) can be open in one window, each with its own
 connection, tabs and terminals. They're listed left of the tabs: `+` (or the `NewProject`
 command) opens another on the connect screen, a middle click or `Disconnect` closes one, and
-Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them. This works with the Node server
-(`scripts/dev.sh`); the desktop app's Go backend still has a single connection.
+Cmd+1, Cmd+2, ... (Ctrl on Windows) switch between them.
 
 Monomyth opens where you left off: the projects that were open reconnect, and their tabs come
 back once connected (files at the same cursor, terminals, source control, the explorer, SQL
@@ -84,7 +83,7 @@ come after them.
   holding any with a dot.
 - **SQL** (Cmd+D, the `Sql` command, or `Sql <saved connection>`): a tab connected to a PostgreSQL,
   MySQL/MariaDB, SQL Server or SQLite database. Queries run from this computer (not in the
-  container), with the Node server (`scripts/dev.sh`). The left lists the saved connections
+  container). The left lists the saved connections
   (`a` new, `e` edit, `d` delete, Enter connect); connected, it lists the tables and views (by
   schema when there are several) and their columns: `l`/`h` expand and collapse, Enter shows a
   table's first 100 rows, `i` inserts the name in the query, `y` copies it, `R` refreshes.
@@ -126,13 +125,29 @@ strings, `cyan` types). The folder can be a link to one kept elsewhere, like a d
 If the connection drops, the app reconnects once by itself and otherwise shows a Reconnect
 button; open files and unsaved changes stay, and terminals start a new shell when typed in.
 
-## Running it
+## The macOS app
 
-It runs as a Node server (`server/`, the app's service over HTTP on
-:34115), Vite (http://127.0.0.1:9245), and an app window (Edge or Chrome with `--app`, on its
-own profile; no tabs or address bar). Needs Node 22.18+ and pnpm. Closing the window (or
-Ctrl+C) stops everything; `--browser` / `-Browser` skips the window. In Git Bash (or on
-macOS/Linux):
+Built on a Mac with Bun and Go 1.26+:
+
+```sh
+cd desktop
+bun install
+bun run build
+```
+
+That builds the page and the container agents, then the app with Electrobun:
+`desktop/artifacts/macos-arm64-Monomyth.dmg` to install from, and the app itself in
+`desktop/build/stable-macos-arm64/`. It's about 40 MB to download and unpacks itself the first
+time it's opened (about 180 MB). It runs the server on Bun inside the app and shows the page
+in the system's WebKit; terminals, git, `oc` and `rg` use your login shell's PATH. The build
+isn't signed, so the first time, right-click it and choose Open.
+
+## Running from source
+
+On Windows (WSL or Git Bash), Linux, or macOS while working on it: the server (`server/` on
+Bun, the app's service over HTTP on :34115), Vite (http://127.0.0.1:9245), and an app window
+(Edge or Chrome with `--app`, on its own profile; no tabs or address bar). Needs Bun. Closing
+the window (or Ctrl+C) stops everything; `--browser` / `-Browser` skips the window:
 
 ```sh
 ./scripts/dev.sh
@@ -149,8 +164,8 @@ picker is Windows' own, and Windows paths (`C:\Users\...`) open as their `/mnt/c
 container uploads the Go agent from `agent/bin/`, so build it once with
 `go run ./scripts/buildagent` (needs Go 1.26+; the scripts do this when Go is installed).
 
-Checks: `GOOS=linux go vet ./...`, `cd frontend && pnpm build && pnpm lint`,
-`cd server && pnpm typecheck && pnpm test`.
+Checks: `GOOS=linux go vet ./...`, `cd frontend && bun run build && bun run lint`,
+`cd server && bun run typecheck && bun test`, `cd desktop && bun run typecheck`.
 
 ## Layout
 
@@ -160,10 +175,12 @@ Checks: `GOOS=linux go vet ./...`, `cd frontend && pnpm build && pnpm lint`,
 - `agent/` — the agent binary for containers (linux), serving `internal/agent` over
   stdin/stdout; `go run ./scripts/buildagent` builds it into `agent/bin/`.
 - `internal/proto` — the agent's wire format.
-- `server/` — the app's service in Node (TypeScript run directly by Node, no build), for the
-  browser: `src/local` ports `internal/agent` for this computer (terminals on node-pty) and
-  `src/remote.ts` connects to containers with `oc` and the Go agent. `src/sql` runs the SQL
-  tabs' queries (pg, mysql2, mssql, and Node's own SQLite in a child process so a query can
-  be stopped).
+- `server/` — the app's service, on Bun (TypeScript run directly, no build): `src/local` ports
+  `internal/agent` for this computer (terminals on Bun's own pseudo-terminal, or node-pty's
+  ConPTY on Windows) and `src/remote.ts` connects to containers with `oc` and the Go agent.
+  `src/sql` runs the SQL tabs' queries (pg, mysql2, mssql, and `node:sqlite` in a child process
+  so a query can be stopped).
+- `desktop/` — the macOS app (Electrobun): `src/main.ts` starts the server and opens the
+  window, `scripts/stage.ts` gathers what goes in the app, `assets/` has the icon.
 - `frontend/src/lib` — the bridge to the backend, app state, actions, commands, shortcuts, themes.
   `frontend/src/components` — the screens and panes.

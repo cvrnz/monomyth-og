@@ -1,27 +1,44 @@
-// The backend for running Monomyth in a browser: serves the app's methods (see app.ts) over
-// HTTP, which Vite's dev server proxies /api to.
+// The backend: serves the app's methods (see app.ts) over HTTP. In development Vite's dev
+// server proxies /api to it; in the macOS app (desktop/) it also serves the built page.
 //
-//   node server/src/main.ts [--addr 127.0.0.1:34115] [--agent path/to/agent]
+//   bun server/src/main.ts [--addr 127.0.0.1:34115] [--static frontend/dist] [--agent path/to/agent]
 //
 // POST /api/<Method> with a JSON array of arguments returns the result as JSON (or an error
-// with status 500); GET /api/events streams the app's events. --agent runs an agent binary on
-// this machine as a pretend pod, to try the container path without a cluster.
+// with status 500); GET /api/events streams the app's events. --static serves the page from
+// that folder. --agent runs an agent binary on this machine as a pretend pod, to try the
+// container path without a cluster. Port 0 picks a free one.
+//
+// Started by the macOS app, it talks to it over IPC: it sends { ready: port } once listening,
+// { dirty } when unsaved changes come and go, and { quit: true } when the page agrees to quit;
+// the app sends { event } for events to pass to the page (app:quit-requested).
+import { createReadStream, statSync } from 'node:fs'
 import http from 'node:http'
+import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { App } from './app.ts'
 import { Sql } from './sql/index.ts'
 
 const { values: flags } = parseArgs({
-  options: { addr: { type: 'string', default: '127.0.0.1:34115' }, agent: { type: 'string', default: '' } },
+  options: {
+    addr: { type: 'string', default: '127.0.0.1:34115' },
+    agent: { type: 'string', default: '' },
+    static: { type: 'string', default: '' },
+  },
 })
 const at = flags.addr.lastIndexOf(':')
 const host = flags.addr.slice(0, at) || '127.0.0.1'
 const port = Number(flags.addr.slice(at + 1))
 
 const subscribers = new Set<http.ServerResponse>()
-const app = new App((event, data) => {
+const emit = (event: string, data?: unknown) => {
   const msg = `data: ${JSON.stringify({ event, data: data ?? null })}\n\n`
   for (const res of subscribers) res.write(msg)
+}
+const app = new App(emit)
+// The macOS app, when it started this server.
+const desktop = process.send ? (msg: unknown) => process.send!(msg) : undefined
+process.on('message', (msg: { event?: string }) => {
+  if (msg?.event) emit(msg.event)
 })
 app.localAgent = flags.agent
 const sql = new Sql()
@@ -44,6 +61,43 @@ const methods: Record<string, (args: any[]) => unknown> = {
   SqlTables: ([id]) => sql.tables(String(id ?? '')),
   SqlColumns: ([id, schema, table]) => sql.columns(String(id ?? ''), schema, table),
   SqlDisconnect: ([id]) => sql.disconnect(String(id ?? '')),
+  // The macOS app asks before closing while anything is unsaved. Quit returns whether there's
+  // an app to quit (in a browser there isn't).
+  SetDirty: ([dirty]) => desktop?.({ dirty: Boolean(dirty) }),
+  Quit: () => {
+    desktop?.({ quit: true })
+    return Boolean(desktop)
+  },
+}
+
+// The built page, for the macOS app: files from --static, and index.html for anything else.
+const types: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ttf': 'font/ttf',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.wasm': 'application/wasm',
+}
+
+function serveStatic(pathname: string, res: http.ServerResponse) {
+  const root = path.resolve(flags.static)
+  let file = path.join(root, 'index.html')
+  try {
+    const want = path.join(root, decodeURIComponent(pathname))
+    if (want.startsWith(root + path.sep) && statSync(want).isFile()) file = want
+  } catch {
+    // A malformed path: the page.
+  }
+  // Vite's hashed assets never change; everything else is checked each time.
+  const cache = pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache'
+  res.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream', 'Cache-Control': cache })
+  createReadStream(file).pipe(res)
 }
 
 // This server can read and write your files and run shells, so only this machine's pages may
@@ -81,6 +135,10 @@ const server = http.createServer(async (req, res) => {
     req.on('close', () => subscribers.delete(res))
     return
   }
+  if (flags.static && req.method === 'GET' && !url.pathname.startsWith('/api/')) {
+    serveStatic(url.pathname, res)
+    return
+  }
   const fn = url.pathname.startsWith('/api/') && req.method === 'POST' ? methods[url.pathname.slice(5)] : undefined
   if (!fn) {
     res.writeHead(404).end('not found')
@@ -100,7 +158,12 @@ const server = http.createServer(async (req, res) => {
   }
 })
 
-server.listen(port, host, () => console.log(`monomyth server on http://${flags.addr}`))
+server.listen(port, host, () => {
+  const at = server.address()
+  const bound = typeof at === 'object' && at ? at.port : port
+  console.log(`monomyth server on http://${host}:${bound}`)
+  desktop?.({ ready: bound })
+})
 
 // Hang up the shells before exiting.
 const stop = async () => {
@@ -109,3 +172,5 @@ const stop = async () => {
 }
 process.on('SIGINT', stop)
 process.on('SIGTERM', stop)
+// The macOS app went away.
+if (desktop) process.on('disconnect', stop)
